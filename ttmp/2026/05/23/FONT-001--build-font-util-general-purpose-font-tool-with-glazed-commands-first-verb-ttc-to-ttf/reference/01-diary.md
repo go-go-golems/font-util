@@ -527,3 +527,83 @@ Consolidating into one binary is more convenient than maintaining two separate t
 - `font-util init-template` (bare command - writes YAML file)
 - `font-util inspect-font` (row-emitting - outputs metrics/shaping data)
 - `font-util render` (bare command - writes PDF file)
+
+---
+
+## Step 9: Integrate typo-copy-generator into font-util
+
+Copied 5 packages from `~/code/wesen/2026-05-22--typo-copy-generator/` into `pkg/`, fixed import paths, added dependencies, created 3 Glazed commands (init-template, inspect-font, render), wired them into the root command, and added TTC file support for inspect-font and render.
+
+**Commit (code):** 41d915b — "feat: copy typo-copy-generator packages into font-util"
+**Commit (code):** fc16756 — "feat: integrate typo-copy-generator as Glazed commands (init-template, inspect-font, render)"
+
+### Prompt Context
+
+**User prompt (verbatim):** "ok, now integrate the functionality of ~/code/wesen/2026-05-22--typo-copy-generator/ into this tool as well, you can literally copy it verbatim and then adapt if you want."
+
+**Assistant interpretation:** Copy the typo-copy-generator source packages verbatim, fix import paths, wrap the 3 subcommands as Glazed commands, and wire into font-util's root.
+
+**Inferred user intent:** Consolidate both font tools into a single binary with shared infrastructure.
+
+### What I did
+- Copied 5 packages: fontmetrics, spec, shape, layout, renderpdf
+- Fixed all import paths from `github.com/wesen/typo-copy-generator/internal/` to `github.com/go-go-golems/font-util/pkg/`
+- Added dependencies: go-pdf/fpdf v0.9.0, go-text/typesetting v0.3.4, golang.org/x/image v0.41.0, gopkg.in/yaml.v3 v3.0.1
+- Created `init-template` command (bare command, writes YAML file)
+- Created `inspect-font` command (row-emitting, outputs metrics + shaping data)
+- Created `render` command (bare command, writes PDF; dry-run mode emits layout rows)
+- Added TTC file support in inspect-font and render (extracts first font to temp file)
+- Fixed lint issues: gofmt, max→maxf rename, errcheck for os.Remove/tmpFile.Close
+- Updated README with all 4 commands
+- All 7 package tests pass, lint clean
+
+### Why
+Consolidating font tools reduces tool sprawl and gives all commands the shared Glazed infrastructure (output formatting, help system, logging).
+
+### What worked
+- The verbatim copy approach worked well — the packages are self-contained with clean boundaries
+- All 6 original tests passed immediately after fixing import paths
+- TTC file support was easy to add via the existing ttc package — just extract to a temp file
+- The render command's `--dry-run` mode works beautifully with Glazed's output formatting
+
+### What didn't work
+- Had a flag name conflict: `--template` was defined in both the render command and the Glazed output section. Renamed to `--yaml-template`.
+- The `max` function in layout.go conflicted with Go 1.21+'s built-in `max`. Renamed to `maxf`.
+- errcheck flagged unchecked returns on `os.Remove` and `tmpFile.Close` in the temp file pattern.
+- Had to clean up a botched sed deletion of the `marshalJSON` function.
+
+### What I learned
+- Go 1.21+ predeclares `max` and `min`, so any package that defines its own will fail the `predeclared` linter. The typo-copy-generator was written before this became an issue.
+- The `go-text/typesetting` harfbuzz integration provides significantly better shaping than the SFNT kern fallback — ligature glyphs (like "fi") are properly resolved as single glyphs.
+- TTC files cannot be directly read by `golang.org/x/image/font/sfnt.Parse` — it rejects collections with "invalid single font". The workaround of extracting to a temp TTF file works but is not ideal for production. A future improvement would be to add native TTC support to the fontmetrics package.
+
+### What was tricky to build
+- The TTC temp-file pattern is a pragmatic workaround but has edge cases: the temp file is removed on defer, which means if the render is long-running, the file could be cleaned up early. In practice this is fine since render is a one-shot CLI command.
+- The `marshalJSON` function cleanup via sed was messy — it left a dangling comment and partial function body. Had to manually fix.
+
+### What warrants a second pair of eyes
+- The TTC temp file pattern in inspect-font and render — both extract the first font. For a TTC with multiple fonts, the user might want to specify which font to inspect/render. This is a future feature.
+- The `--yaml-template` flag name is a departure from the original `--template`. Users familiar with typo-copy-generator will need to adjust.
+
+### What should be done in the future
+- Add `--font-index` flag to inspect-font and render to select a specific font from TTC
+- Add native TTC support to fontmetrics (avoid temp file extraction)
+- Consider adding an `inspect-ttc` command that lists all fonts in a collection with their metrics
+- Add CLI integration tests (like the original `TestCLISmokeDryRunAndPDF`)
+
+### Code review instructions
+- Run `go test ./...` — all 7 package test suites should pass
+- Run `go run ./cmd/font-util --help` — should show 4 commands
+- Run `go run ./cmd/font-util inspect-font Didot.ttc` — should show Didot metrics
+- Run `go run ./cmd/font-util render --font Didot.ttc --text "AV" --out /tmp/test.pdf` — should create PDF
+
+### Technical details
+
+**Commands now available:**
+- `ttc2ttf` — Extract TTF files from TTC
+- `init-template` — Create starter YAML practice template
+- `inspect-font` — Inspect font metrics and shaping (TTC-aware)
+- `render` — Render typography practice PDF (TTC-aware, dry-run mode)
+
+**Package count:** 7 (ttc, fontmetrics, spec, shape, layout, renderpdf + cmd/font-util/cmds)
+**Total test count:** 15 tests across 7 packages

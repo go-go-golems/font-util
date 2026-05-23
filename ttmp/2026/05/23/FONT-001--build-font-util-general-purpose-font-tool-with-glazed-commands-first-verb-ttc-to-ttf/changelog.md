@@ -32,3 +32,8 @@ Completed full implementation: TTC parser, TTF writer, ttc2ttf command, tests pa
 - /home/manuel/code/wesen/go-go-golems/font-util/pkg/ttc/parser_test.go — Tests with Didot/Futura/GillSans TTC files
 - /home/manuel/code/wesen/go-go-golems/font-util/pkg/ttc/writer.go — TTF extraction writer with offset recalculation
 
+
+## 2026-05-23
+
+Integrated typo-copy-generator: 5 packages copied, 3 Glazed commands created (init-template, inspect-font, render), TTC support added, lint clean, all tests pass. Commits: 41d915b, fc16756
+

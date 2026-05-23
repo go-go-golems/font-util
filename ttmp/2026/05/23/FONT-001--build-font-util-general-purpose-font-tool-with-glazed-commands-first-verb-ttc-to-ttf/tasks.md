@@ -22,9 +22,9 @@
 - [x] 5.2 Run `make test` and ensure all tests pass
 - [x] 5.3 Update README.md with usage examples
 - [x] 5.4 Final commit and push
-- [ ] Copy typo-copy-generator packages (fontmetrics, spec, shape, layout, renderpdf) into pkg/
-- [ ] Fix import paths from wesen/typo-copy-generator to go-go-golems/font-util
-- [ ] Add dependencies (fpdf, typesetting, x/image, yaml.v3)
-- [ ] Create Glazed commands: init-template, inspect-font, render
-- [ ] Wire new commands into root and test
-- [ ] Copy examples and run lint + test
+- [x] Copy typo-copy-generator packages (fontmetrics, spec, shape, layout, renderpdf) into pkg/
+- [x] Fix import paths from wesen/typo-copy-generator to go-go-golems/font-util
+- [x] Add dependencies (fpdf, typesetting, x/image, yaml.v3)
+- [x] Create Glazed commands: init-template, inspect-font, render
+- [x] Wire new commands into root and test
+- [x] Copy examples and run lint + test
