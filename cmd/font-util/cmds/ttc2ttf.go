@@ -20,6 +20,7 @@ type Ttc2TtfSettings struct {
 	InputFile string `glazed:"input-file"`
 	OutputDir string `glazed:"output-dir"`
 	Force     bool   `glazed:"force"`
+	List      bool   `glazed:"list"`
 }
 
 // Verify interface compliance
@@ -37,10 +38,13 @@ The output files are named using the PostScript name (Name ID 6)
 from each font's 'name' table. If the name cannot be extracted,
 the fallback name is "font-{index}.ttf".
 
+Use --list to see what fonts are in a TTC without extracting.
+
 Examples:
   font-util ttc2ttf fonts.ttc
   font-util ttc2ttf fonts.ttc --output-dir ./extracted
   font-util ttc2ttf fonts.ttc --force
+  font-util ttc2ttf fonts.ttc --list
 `),
 		cmds.WithFlags(
 			fields.New(
@@ -54,6 +58,12 @@ Examples:
 				fields.TypeBool,
 				fields.WithDefault(false),
 				fields.WithHelp("Overwrite existing output files"),
+			),
+			fields.New(
+				"list",
+				fields.TypeBool,
+				fields.WithDefault(false),
+				fields.WithHelp("List fonts in the TTC without extracting"),
 			),
 		),
 		cmds.WithArguments(
@@ -84,6 +94,23 @@ func (c *Ttc2TtfCommand) Run(
 
 	if _, err := os.Stat(s.InputFile); err != nil {
 		return fmt.Errorf("input file not found: %s", s.InputFile)
+	}
+
+	ttcFile, err := ttc.ParseFile(s.InputFile)
+	if err != nil {
+		return err
+	}
+
+	if s.List {
+		for _, font := range ttcFile.Fonts {
+			sfntLabel := "TrueType"
+			if font.Header.SFNTVersion == 0x4F54544F {
+				sfntLabel = "CFF/OpenType"
+			}
+			fmt.Printf("  %d: %s (%s, %d tables)\n", font.Index, font.Name, sfntLabel, font.Header.NumTables)
+		}
+		fmt.Printf("\n%d font(s) in %s\n", len(ttcFile.Fonts), s.InputFile)
+		return nil
 	}
 
 	outputPaths, fontNames, err := ttc.ExtractAllFonts(s.InputFile, s.OutputDir, s.Force)

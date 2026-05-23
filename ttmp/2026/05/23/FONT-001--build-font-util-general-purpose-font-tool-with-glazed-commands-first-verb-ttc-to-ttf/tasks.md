@@ -33,3 +33,8 @@
 - [x] Add --font-index flag to inspect-font and render for TTC font selection
 - [x] Add CLI integration tests (ttc2ttf, inspect-font, render smoke)
 - [x] Lint, test, commit, push
+- [ ] Add inspect-ttc command: list all fonts in a TTC with names/metrics
+- [ ] Add --list flag to ttc2ttf: show font names without extracting
+- [ ] OTC/CFF support: detect OTTO SFNTVersion, use .otf extension
+- [ ] Native TTC support in fontmetrics via opentype.ParseCollection
+- [ ] Lint, test, commit, push

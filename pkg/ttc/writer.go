@@ -107,7 +107,11 @@ func ExtractAllFonts(ttcPath string, outputDir string, force bool) ([]string, []
 	var fontNames []string
 
 	for _, font := range ttc.Fonts {
-		filename := fmt.Sprintf("%s.ttf", font.Name)
+		ext := ".ttf"
+		if font.Header.SFNTVersion == 0x4F54544F {
+			ext = ".otf"
+		}
+		filename := fmt.Sprintf("%s%s", font.Name, ext)
 		outputPath := filepath.Join(outputDir, filename)
 
 		if !force {

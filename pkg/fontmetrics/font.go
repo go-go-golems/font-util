@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/go-go-golems/font-util/pkg/ttc"
 	"golang.org/x/image/font"
+	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/font/sfnt"
 	"golang.org/x/image/math/fixed"
 )
@@ -46,6 +48,48 @@ func LoadBytes(b []byte) (*Loaded, error) {
 		return nil, err
 	}
 	return &Loaded{Bytes: b, Font: f, Metrics: m}, nil
+}
+
+// LoadFromTTC loads a specific font from a TrueType Collection (.ttc).
+// fontIndex is 0-based.
+// Uses opentype.ParseCollection for the sfnt.Font, then extracts
+// the font's raw bytes via ttc.ExtractFontBytes so that OS/2 metrics
+// are read from the correct font (not the first font in the collection).
+func LoadFromTTC(data []byte, fontIndex int) (*Loaded, error) {
+	coll, err := opentype.ParseCollection(data)
+	if err != nil {
+		return nil, fmt.Errorf("parsing TTC: %w", err)
+	}
+	if fontIndex < 0 || fontIndex >= coll.NumFonts() {
+		return nil, fmt.Errorf("font index %d out of range (TTC has %d fonts)", fontIndex, coll.NumFonts())
+	}
+
+	f, err := coll.Font(fontIndex)
+	if err != nil {
+		return nil, fmt.Errorf("loading font %d from collection: %w", fontIndex, err)
+	}
+
+	// Parse the TTC with our own parser to get the FontEntry for extraction.
+	// This gives us the raw standalone TTF bytes so parseOS2 reads the
+	// correct font's OS/2 table.
+	ttcFile, err := ttc.Parse(data)
+	if err != nil {
+		return nil, fmt.Errorf("parsing TTC for extraction: %w", err)
+	}
+	if fontIndex >= len(ttcFile.Fonts) {
+		return nil, fmt.Errorf("font index %d out of range", fontIndex)
+	}
+	fontBytes, err := ttc.ExtractFontBytes(data, ttcFile.Fonts[fontIndex])
+	if err != nil {
+		return nil, fmt.Errorf("extracting font %d bytes: %w", fontIndex, err)
+	}
+
+	m, err := Extract(fontBytes, f)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Loaded{Bytes: fontBytes, Font: f, Metrics: m}, nil
 }
 
 func Extract(data []byte, f *sfnt.Font) (Metrics, error) {

@@ -39,6 +39,15 @@ func main() {
 	cobra.CheckErr(err)
 	rootCmd.AddCommand(ttc2ttfCobra)
 
+	// inspect-ttc command
+	inspectTtcCmd, err := cmds.NewInspectTtcCommand()
+	cobra.CheckErr(err)
+	inspectTtcCobra, err := cli.BuildCobraCommand(inspectTtcCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{AppName: "font-util"}),
+	)
+	cobra.CheckErr(err)
+	rootCmd.AddCommand(inspectTtcCobra)
+
 	// init-template command
 	initTemplateCmd, err := cmds.NewInitTemplateCommand()
 	cobra.CheckErr(err)
