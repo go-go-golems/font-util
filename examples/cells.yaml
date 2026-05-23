@@ -1,0 +1,23 @@
+version: 1
+font: ./font.otf
+output: ./cells.pdf
+page:
+  size: A4
+  orientation: portrait
+  margin: {top: 36pt, right: 36pt, bottom: 36pt, left: 48pt}
+style:
+  point_size: 48pt
+  labels: {show: true, font_size: 7pt}
+layout:
+  mode: cells
+  columns: 3
+  row_gap: 18pt
+  cell_gap: 18pt
+  item_gap: 24pt
+  practice_lines_after_model: 2
+  wrap: true
+sections:
+  - title: Pair cells
+    rows:
+      - items: ["AV", "To", "Wa", "Ty", "fi", "office"]
+        blank_lines: 2

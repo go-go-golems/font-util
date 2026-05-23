@@ -1,0 +1,41 @@
+version: 1
+font: ./font.otf
+output: ./kerning-ligatures.pdf
+page:
+  size: A4
+  orientation: portrait
+  margin: {top: 36pt, right: 36pt, bottom: 36pt, left: 48pt}
+style:
+  point_size: 54pt
+  model_opacity: 1.0
+  labels: {show: true, font_size: 7pt}
+layout:
+  mode: row
+  columns: 1
+  row_gap: 18pt
+  cell_gap: 12pt
+  item_gap: 24pt
+  practice_lines_after_model: 2
+  wrap: true
+shaping:
+  direction: ltr
+  language: en
+  script: latn
+  features: {kern: true, liga: true, clig: true, calt: true}
+sections:
+  - title: Capitals
+    rows:
+      - items: ["A", "V", "W", "T", "Y"]
+        blank_lines: 2
+  - title: Kerning pairs
+    rows:
+      - items: ["AV", "VA", "To", "Wa", "Ty"]
+        blank_lines: 3
+  - title: Ligatures and words
+    rows:
+      - items: ["fi", "fl", "ffi", "office", "affinity"]
+        blank_lines: 3
+  - title: Free practice
+    rows:
+      - items: []
+        blank_lines: 4
