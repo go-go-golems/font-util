@@ -19,3 +19,16 @@ Created ticket FONT-001, wrote comprehensive implementation guide (design-doc), 
 
 Validated ticket with docmgr doctor (all checks pass), uploaded design-doc + diary bundle to reMarkable at /ai/2026/05/23/FONT-001
 
+
+## 2026-05-23
+
+Completed full implementation: TTC parser, TTF writer, ttc2ttf command, tests passing on 3 real TTC files, lint clean, README updated. Commits: ff638bb, 9907509
+
+### Related Files
+
+- /home/manuel/code/wesen/go-go-golems/font-util/README.md — Usage examples and output format docs
+- /home/manuel/code/wesen/go-go-golems/font-util/cmd/font-util/cmds/ttc2ttf.go — Glazed command wired to parser/writer
+- /home/manuel/code/wesen/go-go-golems/font-util/pkg/ttc/parser.go — TTC binary parser with name extraction
+- /home/manuel/code/wesen/go-go-golems/font-util/pkg/ttc/parser_test.go — Tests with Didot/Futura/GillSans TTC files
+- /home/manuel/code/wesen/go-go-golems/font-util/pkg/ttc/writer.go — TTF extraction writer with offset recalculation
+

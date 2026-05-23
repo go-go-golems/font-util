@@ -15,19 +15,17 @@ RelatedFiles:
     - Path: /home/manuel/code/wesen/corporate-headquarters/glazed/cmd/glaze/main.go
       Note: Reference Glazed root command pattern
     - Path: Makefile
-      Note: Has XXX_BINARY placeholder
-    - Path: cmd/XXX/main.go
-      Note: Empty main.go
+      Note: Build targets for font-util
     - Path: go.mod
-      Note: Current module name is XXX
-    - Path: pkg/doc.go
-      Note: Empty package
+      Note: Go module definition for font-util
 ExternalSources: []
 Summary: ""
 LastUpdated: 2026-05-23T15:45:09.360277868-04:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
+
 
 
 

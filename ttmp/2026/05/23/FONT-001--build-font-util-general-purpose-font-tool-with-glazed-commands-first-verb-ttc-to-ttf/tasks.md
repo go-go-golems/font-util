@@ -18,7 +18,7 @@
 - [x] 4.1 Implement Ttc2TtfCommand Glazed command in `cmd/font-util/cmds/ttc2ttf.go`
 - [x] 4.2 Wire root Cobra command in `cmd/font-util/main.go` with logging, help, and ttc2ttf
 - [x] 4.3 Integration test: run `font-util ttc2ttf` on real TTC files, verify output
-- [ ] 5.1 Run `make lint` and fix any issues
-- [ ] 5.2 Run `make test` and ensure all tests pass
-- [ ] 5.3 Update README.md with usage examples
-- [ ] 5.4 Final commit and push
+- [x] 5.1 Run `make lint` and fix any issues
+- [x] 5.2 Run `make test` and ensure all tests pass
+- [x] 5.3 Update README.md with usage examples
+- [x] 5.4 Final commit and push

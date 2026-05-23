@@ -356,3 +356,106 @@ The skeleton needs to compile and show help before we can add the actual parsing
 **Commit:** 774777e
 **Glazed version:** v1.2.14
 **Cobra version:** v1.10.2
+
+---
+
+## Step 6: Phase 2+3 — TTC Parser and TTF Writer Implementation
+
+Implemented the full TTC binary parser (`pkg/ttc/parser.go`) and TTF writer (`pkg/ttc/writer.go`), wired them into the ttc2ttf Glazed command, and wrote comprehensive tests. The tool now works end-to-end on real TTC files.
+
+**Commit (code):** ff638bb — "feat: implement TTC parser, TTF writer, and wire ttc2ttf command"
+
+### What I did
+- Implemented `pkg/ttc/parser.go`: TTC header parsing, per-font offset table parsing, table record parsing, bounds validation, font name extraction from `name` table (Name ID 6, Platform 3 Windows + Platform 1 Mac Roman fallback), UTF-16BE decoding, filename sanitization, `CalcSearchFields`
+- Implemented `pkg/ttc/writer.go`: `ExtractFont` (reassembles standalone TTF with recalculated offsets and search fields, 4-byte padding), `ExtractAllFonts` (convenience function with force/overwrite protection)
+- Implemented `pkg/ttc/parser_test.go`: Tests with all 3 TTC files (Didot 3 fonts, Futura 5 fonts, GillSans 9 fonts), error rejection tests, CalcSearchFields unit tests, round-trip extraction test, ExtractAllFonts test
+- Wired `cmd/font-util/cmds/ttc2ttf.go` to call `ttc.ExtractAllFonts` and emit summary rows
+- All tests pass, all extracted files validated with `fc-scan`
+
+### Why
+This is the core functionality — reading a TTC binary and producing valid standalone TTF files.
+
+### What worked
+- The binary parser worked on the first attempt against all 3 real TTC files
+- Font name extraction correctly found Name ID 6 from the Windows platform for all 17 fonts across the 3 TTC files
+- `fc-scan` validates that the extracted TTF files are properly formed
+- The `--force` flag correctly prevents accidental overwrites
+
+### What didn't work
+- Initially had a Go naming conflict: `Tag` field and `Tag()` method had the same name. Fixed by renaming the field to `TagBytes`.
+- `nonamedreturns` linter flagged `CalcSearchFields`. Fixed by using unnamed return types.
+
+### What I learned
+- macOS TTC files consistently use Platform 3 (Windows), Encoding 1 (Unicode BMP) for name records. The Mac Roman fallback wasn't needed for these test files but is there for robustness.
+- Shared tables in TTC files don't cause any issues during extraction — we copy the raw bytes regardless of whether they're shared, so each output TTF is self-contained.
+- The Go `encoding/binary` package makes the TTC parsing straightforward — no need for struct-based binary reading, just explicit slice indexing.
+
+### What was tricky to build
+- The `name` table is a mini-format within a format. You have to: (1) find the `name` table record, (2) parse the name table header to find the string storage offset, (3) iterate through name records checking platform/encoding/name IDs, (4) read the string at the correct offset within the string storage, (5) decode UTF-16BE to UTF-8. Each step has its own bounds checking.
+- The `CalcSearchFields` function had to change from named returns (which the linter rejects) to unnamed returns, which means the caller has to remember the return order. This is acceptable for a simple utility function.
+
+### What warrants a second pair of eyes
+- The `CalcSearchFields` function now returns `(uint16, uint16, uint16)` — the caller must match the order (searchRange, entrySelector, rangeShift). This is error-prone. Consider a small struct if more callers are added.
+
+### What should be done in the future
+- Add a `--list` flag to ttc2ttf that shows font names without extracting
+- Add an `--index` flag to extract only a specific font
+- Add head table checkSumAdjustment recomputation (open question from design doc)
+- Consider OTC/CFF support (SFNTVersion = "OTTO" → use .otf extension)
+
+### Code review instructions
+- Run `go test ./pkg/ttc/ -v -count=1` — all tests should pass
+- Run `go run ./cmd/font-util ttc2ttf Didot.ttc` — should extract 3 fonts
+- Run `fc-scan` on any extracted TTF to verify font validity
+
+### Technical details
+
+**Parsed results:**
+- Didot.ttc: 3 fonts (Didot, Didot-Italic, Didot-Bold)
+- Futura.ttc: 5 fonts (Futura-Medium, Futura-MediumItalic, Futura-Bold, Futura-CondensedMedium, Futura-CondensedExtraBold)
+- GillSans.ttc: 9 fonts (GillSans, GillSans-Bold, GillSans-Italic, GillSans-BoldItalic, GillSans-SemiBold, GillSans-SemiBoldItalic, GillSans-UltraBold, GillSans-Light, GillSans-LightItalic)
+
+---
+
+## Step 7: Phase 5 — Lint, Test, README (Tasks 5.1–5.4)
+
+Fixed lint issues, verified all tests pass, and updated the README with usage examples. All tasks complete.
+
+**Commit (code):** 9907509 — "chore: fix lint issues, update README with usage examples"
+
+### What I did
+- Task 5.1: Fixed `nonamedreturns` lint error in `CalcSearchFields` (changed to unnamed returns)
+- Task 5.1: Fixed gofmt formatting issue in parser.go
+- Task 5.2: `make test` passes — all pkg/ttc tests green
+- Task 5.3: Wrote README.md with ttc2ttf usage examples, output format docs, build instructions
+- Task 5.4: Committed
+
+### Why
+Clean lint and tests are required before any release. README is the first thing users see.
+
+### What worked
+- Lint passed cleanly after the two fixes
+- No test changes needed
+
+### What didn't work
+- N/A
+
+### What I learned
+- The `nonamedreturns` linter in this project is strict — it flags all named returns, not just unused ones. This is a valid style choice (named returns can be confusing), but it means utility functions with multiple same-typed returns need careful documentation.
+
+### What was tricky to build
+- Nothing tricky in this step — it was cleanup.
+
+### What warrants a second pair of eyes
+- N/A
+
+### What should be done in the future
+- Push to origin
+- Consider adding more verbs (inspect, list, subset)
+
+### Code review instructions
+- Run `make lint && make test && make build` — all should pass
+- Read README.md for accuracy
+
+### Technical details
+All 20 tasks completed. All checks pass.
