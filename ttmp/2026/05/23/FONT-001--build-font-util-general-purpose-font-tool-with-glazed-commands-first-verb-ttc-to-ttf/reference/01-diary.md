@@ -607,3 +607,59 @@ Consolidating font tools reduces tool sprawl and gives all commands the shared G
 
 **Package count:** 7 (ttc, fontmetrics, spec, shape, layout, renderpdf + cmd/font-util/cmds)
 **Total test count:** 15 tests across 7 packages
+
+---
+
+## Step 10: Strip Glazed output from bare commands
+
+The user pointed out that most commands don't need Glazed structured output — only `inspect-font` genuinely benefits from `--output json/table/yaml` since it produces tabular data. The other three commands are file-writing operations that should just print status to stdout.
+
+### Prompt Context
+
+**User prompt (verbatim):** "you don't need glazed structured output for most of these, right?"
+
+**Assistant interpretation:** Remove the Glazed output sections from bare commands (ttc2ttf, init-template, render). Keep it only on inspect-font.
+
+**Inferred user intent:** Simplify the commands — don't carry 60+ Glazed formatting flags on commands that just write files.
+
+### What I did
+- Removed `settings.NewGlazedSchema()` and `cli.NewCommandSettingsSection()` from ttc2ttf, init-template, and render
+- Changed ttc2ttf to print "FontName -> /path" per font and "Extracted N font(s)" summary
+- Changed init-template to just silently write the YAML file
+- Changed render to print "Created X (N pages, font: Y)" or JSON on --dry-run
+- Kept Glazed output on inspect-font (the one command where it's genuinely useful)
+- Extracted shared helpers (loadFont, isTTCFile, splitCSV, firstNonEmpty) into helpers.go
+- Lint clean, all tests pass
+
+### Why
+The Glazed output pipeline adds ~60 flags (--output, --fields, --filter, --template, --jq, etc.) to every command that includes it. For bare commands that just write files, this is noise. Users don't need `--output json` when extracting TTF files.
+
+### What worked
+- The refactor was clean — just removed the section wiring and swapped `gp.AddRow()` for `fmt.Printf()`
+- The shared helpers.go file eliminated duplication nicely
+- dry-run mode on render now outputs clean JSON to stdout instead of Glazed rows
+
+### What didn't work
+- N/A
+
+### What I learned
+- The Glazed framework is great for structured-data commands but overkill for file-writing commands. The right pattern is: use Glazed for flag parsing and Cobra integration on all commands, but only add the output section to commands that produce rows.
+
+### What was tricky to build
+- Nothing tricky — just a mechanical removal of sections and replacement of row emission with fmt.Printf.
+
+### What warrants a second pair of eyes
+- The dry-run JSON output on render — it now dumps the full layout document as JSON. This is useful for debugging but different from the previous Glazed row output. Users who were parsing the old output format would need to adjust.
+
+### What should be done in the future
+- N/A
+
+### Code review instructions
+- `go run ./cmd/font-util ttc2ttf GillSans.ttc` — should print names and paths, no Glazed flags in --help
+- `go run ./cmd/font-util inspect-font Didot.ttc --output json` — should still have Glazed output
+- `go run ./cmd/font-util render --font Didot.ttc --text "AV" --out /tmp/test.pdf` — should print one status line
+- `make lint && make test` — all clean
+
+### Technical details
+**Commit:** 9df66be
+**Lines removed:** 199 → 97 net reduction
