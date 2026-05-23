@@ -6,14 +6,11 @@ import (
 	"os"
 
 	"github.com/go-go-golems/font-util/pkg/ttc"
-	"github.com/go-go-golems/glazed/pkg/cli"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/fields"
 	"github.com/go-go-golems/glazed/pkg/cmds/schema"
 	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
-	"github.com/go-go-golems/glazed/pkg/settings"
-	"github.com/go-go-golems/glazed/pkg/types"
 )
 
 type Ttc2TtfCommand struct {
@@ -27,16 +24,6 @@ type Ttc2TtfSettings struct {
 }
 
 func NewTtc2TtfCommand() (*Ttc2TtfCommand, error) {
-	glazedSection, err := settings.NewGlazedSchema()
-	if err != nil {
-		return nil, err
-	}
-
-	commandSettingsSection, err := cli.NewCommandSettingsSection()
-	if err != nil {
-		return nil, err
-	}
-
 	cmdDesc := cmds.NewCommandDescription(
 		"ttc2ttf",
 		cmds.WithShort("Extract individual TTF files from a TTC collection"),
@@ -75,7 +62,6 @@ Examples:
 				fields.WithIsArgument(true),
 			),
 		),
-		cmds.WithSections(glazedSection, commandSettingsSection),
 	)
 
 	return &Ttc2TtfCommand{CommandDescription: cmdDesc}, nil
@@ -84,7 +70,7 @@ Examples:
 func (c *Ttc2TtfCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
 	vals *values.Values,
-	gp middlewares.Processor,
+	_ middlewares.Processor,
 ) error {
 	s := &Ttc2TtfSettings{}
 	if err := vals.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
@@ -95,7 +81,6 @@ func (c *Ttc2TtfCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("input-file is required")
 	}
 
-	// Check input file exists
 	if _, err := os.Stat(s.InputFile); err != nil {
 		return fmt.Errorf("input file not found: %s", s.InputFile)
 	}
@@ -105,17 +90,10 @@ func (c *Ttc2TtfCommand) RunIntoGlazeProcessor(
 		return err
 	}
 
-	// Emit one summary row per extracted font
 	for i, outputPath := range outputPaths {
-		row := types.NewRow(
-			types.MRP("index", i),
-			types.MRP("name", fontNames[i]),
-			types.MRP("output", outputPath),
-		)
-		if err := gp.AddRow(ctx, row); err != nil {
-			return err
-		}
+		fmt.Printf("  %s -> %s\n", fontNames[i], outputPath)
 	}
+	fmt.Printf("\nExtracted %d font(s)\n", len(outputPaths))
 
 	return nil
 }

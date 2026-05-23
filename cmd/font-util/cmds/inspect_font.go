@@ -3,12 +3,8 @@ package cmds
 import (
 	"context"
 	"fmt"
-	"os"
-	"strings"
 
-	"github.com/go-go-golems/font-util/pkg/fontmetrics"
 	"github.com/go-go-golems/font-util/pkg/shape"
-	"github.com/go-go-golems/font-util/pkg/ttc"
 	"github.com/go-go-golems/glazed/pkg/cli"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/fields"
@@ -48,16 +44,19 @@ Load an OpenType/TrueType font and print its metrics (ascender, descender,
 x-height, cap height, etc.) and optionally shape text examples to see
 glyph counts, advance widths, and missing glyphs.
 
+Supports both individual font files (.otf, .ttf) and TrueType Collections (.ttc).
+For TTC files, the first font in the collection is inspected.
+
 Examples:
-  font-util inspect-font --font ./font.otf
-  font-util inspect-font --font ./font.otf --text "AV,To,fi,office" --output json
-  font-util inspect-font --font ./font.otf --point-size 48
+  font-util inspect-font ./font.otf
+  font-util inspect-font ./font.otf --text "AV,To,fi,office" --output json
+  font-util inspect-font fonts.ttc --text "fi"
 `),
 		cmds.WithFlags(
 			fields.New(
 				"font",
 				fields.TypeString,
-				fields.WithHelp("Path to the font file"),
+				fields.WithHelp("Path to the font file (.otf, .ttf, or .ttc)"),
 				fields.WithIsArgument(true),
 			),
 			fields.New(
@@ -93,37 +92,9 @@ func (c *InspectFontCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("--font is required")
 	}
 
-	var loaded *fontmetrics.Loaded
-
-	// Detect TTC files and extract the first font for inspection
-	if isTTCFile(s.Font) {
-		ttcFile, err := ttc.ParseFile(s.Font)
-		if err != nil {
-			return fmt.Errorf("parsing TTC: %w", err)
-		}
-		if len(ttcFile.Fonts) == 0 {
-			return fmt.Errorf("TTC contains no fonts")
-		}
-		// Extract the first font to a temp file for metrics inspection
-		tmpFile, err := os.CreateTemp("", "font-util-inspect-*.ttf")
-		if err != nil {
-			return err
-		}
-		defer func() { _ = os.Remove(tmpFile.Name()) }()
-		if err := ttc.ExtractFont(ttcFile.Data, ttcFile.Fonts[0], tmpFile.Name()); err != nil {
-			return fmt.Errorf("extracting font from TTC: %w", err)
-		}
-		_ = tmpFile.Close()
-		loaded, err = fontmetrics.Load(tmpFile.Name())
-		if err != nil {
-			return err
-		}
-	} else {
-		var err error
-		loaded, err = fontmetrics.Load(s.Font)
-		if err != nil {
-			return err
-		}
+	loaded, err := loadFont(s.Font)
+	if err != nil {
+		return err
 	}
 
 	// Emit metrics as a row
@@ -165,24 +136,4 @@ func (c *InspectFontCommand) RunIntoGlazeProcessor(
 	}
 
 	return nil
-}
-
-func splitCSV(s string) []string {
-	var out []string
-	for _, p := range strings.Split(s, ",") {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			out = append(out, p)
-		}
-	}
-	return out
-}
-
-// isTTCFile checks if a file has the TTC magic bytes.
-func isTTCFile(path string) bool {
-	data, err := os.ReadFile(path)
-	if err != nil || len(data) < 4 {
-		return false
-	}
-	return string(data[0:4]) == "ttcf"
 }

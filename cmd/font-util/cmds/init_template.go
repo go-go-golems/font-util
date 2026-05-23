@@ -5,13 +5,11 @@ import (
 	"os"
 
 	"github.com/go-go-golems/font-util/pkg/spec"
-	"github.com/go-go-golems/glazed/pkg/cli"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/fields"
 	"github.com/go-go-golems/glazed/pkg/cmds/schema"
 	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
-	"github.com/go-go-golems/glazed/pkg/settings"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,16 +24,6 @@ type InitTemplateSettings struct {
 }
 
 func NewInitTemplateCommand() (*InitTemplateCommand, error) {
-	glazedSection, err := settings.NewGlazedSchema()
-	if err != nil {
-		return nil, err
-	}
-
-	commandSettingsSection, err := cli.NewCommandSettingsSection()
-	if err != nil {
-		return nil, err
-	}
-
 	cmdDesc := cmds.NewCommandDescription(
 		"init-template",
 		cmds.WithShort("Create a starter YAML template for typography practice"),
@@ -67,16 +55,15 @@ Examples:
 				fields.WithHelp("Default PDF output path in the template"),
 			),
 		),
-		cmds.WithSections(glazedSection, commandSettingsSection),
 	)
 
 	return &InitTemplateCommand{CommandDescription: cmdDesc}, nil
 }
 
 func (c *InitTemplateCommand) RunIntoGlazeProcessor(
-	ctx context.Context,
+	_ context.Context,
 	vals *values.Values,
-	gp middlewares.Processor,
+	_ middlewares.Processor,
 ) error {
 	s := &InitTemplateSettings{}
 	if err := vals.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
@@ -89,5 +76,9 @@ func (c *InitTemplateCommand) RunIntoGlazeProcessor(
 		return err
 	}
 
-	return os.WriteFile(s.Out, b, 0644)
+	if err := os.WriteFile(s.Out, b, 0644); err != nil {
+		return err
+	}
+
+	return nil
 }
