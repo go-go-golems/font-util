@@ -24,6 +24,7 @@ type RenderCommand struct {
 type RenderSettings struct {
 	YamlTemplate string  `glazed:"yaml-template"`
 	Font         string  `glazed:"font"`
+	FontIndex    int     `glazed:"font-index"`
 	Out          string  `glazed:"out"`
 	Text         string  `glazed:"text"`
 	Glyphs       string  `glazed:"glyphs"`
@@ -49,6 +50,7 @@ Examples:
   font-util render --font ./font.otf --text "A,V,AV,To,fi,office" --blank-lines 3 --out practice.pdf
   font-util render --yaml-template practice.yaml --dry-run
   font-util render --font ./font.otf --text "AV" --debug-shaping
+  font-util render --font fonts.ttc --font-index 1 --text "AV"
 `),
 		cmds.WithFlags(
 			fields.New(
@@ -62,6 +64,12 @@ Examples:
 				fields.TypeString,
 				fields.WithDefault(""),
 				fields.WithHelp("Font file path (overrides template)"),
+			),
+			fields.New(
+				"font-index",
+				fields.TypeInteger,
+				fields.WithDefault(0),
+				fields.WithHelp("Index of the font to use within a TTC file (0-based)"),
 			),
 			fields.New(
 				"out",
@@ -169,7 +177,7 @@ func (c *RenderCommand) RunIntoGlazeProcessor(
 		return err
 	}
 
-	loaded, err := loadFont(rs.Font)
+	loaded, err := loadFont(rs.Font, s.FontIndex)
 	if err != nil {
 		return err
 	}

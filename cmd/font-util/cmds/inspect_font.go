@@ -21,6 +21,7 @@ type InspectFontCommand struct {
 
 type InspectFontSettings struct {
 	Font      string  `glazed:"font"`
+	FontIndex int     `glazed:"font-index"`
 	Texts     string  `glazed:"text"`
 	PointSize float64 `glazed:"point-size"`
 }
@@ -45,19 +46,19 @@ x-height, cap height, etc.) and optionally shape text examples to see
 glyph counts, advance widths, and missing glyphs.
 
 Supports both individual font files (.otf, .ttf) and TrueType Collections (.ttc).
-For TTC files, the first font in the collection is inspected.
+For TTC files, use --font-index to select which font to inspect (default: 0).
 
 Examples:
   font-util inspect-font ./font.otf
   font-util inspect-font ./font.otf --text "AV,To,fi,office" --output json
-  font-util inspect-font fonts.ttc --text "fi"
+  font-util inspect-font fonts.ttc --font-index 2 --text "fi"
 `),
 		cmds.WithFlags(
 			fields.New(
-				"font",
-				fields.TypeString,
-				fields.WithHelp("Path to the font file (.otf, .ttf, or .ttc)"),
-				fields.WithIsArgument(true),
+				"font-index",
+				fields.TypeInteger,
+				fields.WithDefault(0),
+				fields.WithHelp("Index of the font to inspect within a TTC file (0-based)"),
 			),
 			fields.New(
 				"text",
@@ -70,6 +71,14 @@ Examples:
 				fields.TypeFloat,
 				fields.WithDefault(54.0),
 				fields.WithHelp("Point size for shaping examples"),
+			),
+		),
+		cmds.WithArguments(
+			fields.New(
+				"font",
+				fields.TypeString,
+				fields.WithHelp("Path to the font file (.otf, .ttf, or .ttc)"),
+				fields.WithIsArgument(true),
 			),
 		),
 		cmds.WithSections(glazedSection, commandSettingsSection),
@@ -92,12 +101,11 @@ func (c *InspectFontCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("--font is required")
 	}
 
-	loaded, err := loadFont(s.Font)
+	loaded, err := loadFont(s.Font, s.FontIndex)
 	if err != nil {
 		return err
 	}
 
-	// Emit metrics as a row
 	row := types.NewRow(
 		types.MRP("font_name", loaded.Metrics.FontName),
 		types.MRP("units_per_em", loaded.Metrics.UnitsPerEm),
@@ -113,7 +121,6 @@ func (c *InspectFontCommand) RunIntoGlazeProcessor(
 		return err
 	}
 
-	// Shape text examples if provided
 	if s.Texts != "" {
 		sh := shape.NewWithBytes(loaded.Bytes, loaded.Font, loaded.Metrics)
 		for _, t := range splitCSV(s.Texts) {

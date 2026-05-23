@@ -7,12 +7,11 @@ import (
 	"path/filepath"
 )
 
-// ExtractFont extracts a single font from TTC data and writes a standalone TTF file.
-// It reassembles the offset table with recalculated search fields and updated offsets.
-func ExtractFont(ttcData []byte, font FontEntry, outputPath string) error {
+// ExtractFontBytes reassembles a single font from TTC data into a standalone
+// TTF byte slice, with recalculated offset table and updated table offsets.
+// This is the in-memory equivalent of ExtractFont.
+func ExtractFontBytes(ttcData []byte, font FontEntry) ([]byte, error) {
 	numTables := font.Header.NumTables
-
-	// Size of offset table + table directory
 	headerSize := uint32(12 + numTables*16)
 
 	type tableEntry struct {
@@ -28,14 +27,13 @@ func ExtractFont(ttcData []byte, font FontEntry, outputPath string) error {
 		start := rec.Offset
 		end := start + rec.Length
 		if end > uint32(len(ttcData)) {
-			return fmt.Errorf("table %s data out of bounds (offset=%d, length=%d, file size=%d)",
+			return nil, fmt.Errorf("table %s data out of bounds (offset=%d, length=%d, file size=%d)",
 				rec.Tag(), rec.Offset, rec.Length, len(ttcData))
 		}
 
 		tableData := make([]byte, rec.Length)
 		copy(tableData, ttcData[start:end])
 
-		// Pad to 4-byte boundary
 		paddedLen := rec.Length
 		if paddedLen%4 != 0 {
 			paddedLen += 4 - paddedLen%4
@@ -49,21 +47,16 @@ func ExtractFont(ttcData []byte, font FontEntry, outputPath string) error {
 		currentOffset += paddedLen
 	}
 
-	// Build output buffer
-	totalSize := currentOffset
-	output := make([]byte, totalSize)
+	output := make([]byte, currentOffset)
 
-	// Write offset table header
 	binary.BigEndian.PutUint32(output[0:4], font.Header.SFNTVersion)
 	binary.BigEndian.PutUint16(output[4:6], numTables)
 
-	// Recalculate binary search fields
 	searchRange, entrySelector, rangeShift := CalcSearchFields(numTables)
 	binary.BigEndian.PutUint16(output[6:8], searchRange)
 	binary.BigEndian.PutUint16(output[8:10], entrySelector)
 	binary.BigEndian.PutUint16(output[10:12], rangeShift)
 
-	// Write table directory with updated offsets
 	for i, entry := range entries {
 		off := uint32(12 + i*16)
 		copy(output[off:off+4], entry.record.TagBytes[:])
@@ -72,12 +65,20 @@ func ExtractFont(ttcData []byte, font FontEntry, outputPath string) error {
 		binary.BigEndian.PutUint32(output[off+12:off+16], entry.record.Length)
 	}
 
-	// Write table data
 	for _, entry := range entries {
 		copy(output[entry.newOffset:], entry.data)
 	}
 
-	// Ensure output directory exists
+	return output, nil
+}
+
+// ExtractFont extracts a single font from TTC data and writes a standalone TTF file.
+func ExtractFont(ttcData []byte, font FontEntry, outputPath string) error {
+	output, err := ExtractFontBytes(ttcData, font)
+	if err != nil {
+		return err
+	}
+
 	dir := filepath.Dir(outputPath)
 	if dir != "" && dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {

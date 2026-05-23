@@ -229,3 +229,97 @@ func TestExtractAllFontsDidot(t *testing.T) {
 		}
 	}
 }
+
+func TestExtractFontBytesRoundTrip(t *testing.T) {
+	path := filepath.Join("..", "..", "Futura.ttc")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		t.Skip("Skipping: Futura.ttc not found")
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+
+	ttc, err := Parse(data)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	// Extract font 2 (Futura-Bold) in-memory
+	ttfBytes, err := ExtractFontBytes(data, ttc.Fonts[2])
+	if err != nil {
+		t.Fatalf("ExtractFontBytes failed: %v", err)
+	}
+
+	if len(ttfBytes) == 0 {
+		t.Fatal("ExtractFontBytes returned empty bytes")
+	}
+
+	// Verify the in-memory result can be re-parsed as a valid TTF
+	sfntVersion := uint32(ttfBytes[0])<<24 | uint32(ttfBytes[1])<<16 | uint32(ttfBytes[2])<<8 | uint32(ttfBytes[3])
+	if sfntVersion != 0x00010000 && sfntVersion != 0x4F54544F {
+		t.Errorf("In-memory TTF has invalid SFNT version: 0x%08X", sfntVersion)
+	}
+
+	numTables := uint16(ttfBytes[4])<<8 | uint16(ttfBytes[5])
+	if numTables != ttc.Fonts[2].Header.NumTables {
+		t.Errorf("NumTables mismatch: got %d, want %d", numTables, ttc.Fonts[2].Header.NumTables)
+	}
+
+	t.Logf("Extracted Futura-Bold in-memory: %d bytes, %d tables", len(ttfBytes), numTables)
+}
+
+func TestExtractFontBytesVersusFile(t *testing.T) {
+	path := filepath.Join("..", "..", "Didot.ttc")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		t.Skip("Skipping: Didot.ttc not found")
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+
+	ttc, err := Parse(data)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	// Extract the same font both ways and compare
+	tmpDir := t.TempDir()
+	fileOutputPath := filepath.Join(tmpDir, "test.ttf")
+
+	err = ExtractFont(data, ttc.Fonts[0], fileOutputPath)
+	if err != nil {
+		t.Fatalf("ExtractFont (file) failed: %v", err)
+	}
+
+	fileBytes, err := os.ReadFile(fileOutputPath)
+	if err != nil {
+		t.Fatalf("ReadFile on extracted TTF failed: %v", err)
+	}
+
+	memBytes, err := ExtractFontBytes(data, ttc.Fonts[0])
+	if err != nil {
+		t.Fatalf("ExtractFontBytes failed: %v", err)
+	}
+
+	if len(fileBytes) != len(memBytes) {
+		t.Errorf("Size mismatch: file=%d bytes, memory=%d bytes", len(fileBytes), len(memBytes))
+	}
+
+	// Byte-for-byte comparison
+	match := true
+	for i := range fileBytes {
+		if i >= len(memBytes) || fileBytes[i] != memBytes[i] {
+			match = false
+			break
+		}
+	}
+	if !match {
+		t.Error("In-memory and file extraction produced different bytes")
+	} else {
+		t.Logf("Both methods produced identical %d-byte output", len(fileBytes))
+	}
+}

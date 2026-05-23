@@ -19,8 +19,9 @@ func isTTCFile(path string) bool {
 }
 
 // loadFont loads a font for rendering/inspection.
-// Handles TTC files by extracting the first font to a temp file.
-func loadFont(path string) (*fontmetrics.Loaded, error) {
+// Handles TTC files by extracting the specified font in-memory (no temp files).
+// fontIndex selects which font in a TTC to use (0-based); -1 means use the first.
+func loadFont(path string, fontIndex int) (*fontmetrics.Loaded, error) {
 	if isTTCFile(path) {
 		ttcFile, err := ttc.ParseFile(path)
 		if err != nil {
@@ -29,16 +30,18 @@ func loadFont(path string) (*fontmetrics.Loaded, error) {
 		if len(ttcFile.Fonts) == 0 {
 			return nil, fmt.Errorf("TTC contains no fonts")
 		}
-		tmpFile, err := os.CreateTemp("", "font-util-*.ttf")
+		idx := fontIndex
+		if idx < 0 {
+			idx = 0
+		}
+		if idx >= len(ttcFile.Fonts) {
+			return nil, fmt.Errorf("font index %d out of range (TTC has %d fonts)", idx, len(ttcFile.Fonts))
+		}
+		ttfBytes, err := ttc.ExtractFontBytes(ttcFile.Data, ttcFile.Fonts[idx])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("extracting font %d from TTC: %w", idx, err)
 		}
-		defer func() { _ = os.Remove(tmpFile.Name()) }()
-		if err := ttc.ExtractFont(ttcFile.Data, ttcFile.Fonts[0], tmpFile.Name()); err != nil {
-			return nil, fmt.Errorf("extracting font from TTC: %w", err)
-		}
-		_ = tmpFile.Close()
-		return fontmetrics.Load(tmpFile.Name())
+		return fontmetrics.LoadBytes(ttfBytes)
 	}
 	return fontmetrics.Load(path)
 }
