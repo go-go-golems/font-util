@@ -9,7 +9,6 @@ import (
 	"github.com/go-go-golems/glazed/pkg/cmds/fields"
 	"github.com/go-go-golems/glazed/pkg/cmds/schema"
 	"github.com/go-go-golems/glazed/pkg/cmds/values"
-	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"gopkg.in/yaml.v3"
 )
 
@@ -22,6 +21,9 @@ type InitTemplateSettings struct {
 	Out    string `glazed:"out"`
 	PdfOut string `glazed:"pdf-out"`
 }
+
+// Verify interface compliance
+var _ cmds.BareCommand = (*InitTemplateCommand)(nil)
 
 func NewInitTemplateCommand() (*InitTemplateCommand, error) {
 	cmdDesc := cmds.NewCommandDescription(
@@ -60,10 +62,9 @@ Examples:
 	return &InitTemplateCommand{CommandDescription: cmdDesc}, nil
 }
 
-func (c *InitTemplateCommand) RunIntoGlazeProcessor(
+func (c *InitTemplateCommand) Run(
 	_ context.Context,
 	vals *values.Values,
-	_ middlewares.Processor,
 ) error {
 	s := &InitTemplateSettings{}
 	if err := vals.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
@@ -76,9 +77,5 @@ func (c *InitTemplateCommand) RunIntoGlazeProcessor(
 		return err
 	}
 
-	if err := os.WriteFile(s.Out, b, 0644); err != nil {
-		return err
-	}
-
-	return nil
+	return os.WriteFile(s.Out, b, 0644)
 }

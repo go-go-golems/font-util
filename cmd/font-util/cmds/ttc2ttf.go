@@ -10,7 +10,6 @@ import (
 	"github.com/go-go-golems/glazed/pkg/cmds/fields"
 	"github.com/go-go-golems/glazed/pkg/cmds/schema"
 	"github.com/go-go-golems/glazed/pkg/cmds/values"
-	"github.com/go-go-golems/glazed/pkg/middlewares"
 )
 
 type Ttc2TtfCommand struct {
@@ -22,6 +21,9 @@ type Ttc2TtfSettings struct {
 	OutputDir string `glazed:"output-dir"`
 	Force     bool   `glazed:"force"`
 }
+
+// Verify interface compliance
+var _ cmds.BareCommand = (*Ttc2TtfCommand)(nil)
 
 func NewTtc2TtfCommand() (*Ttc2TtfCommand, error) {
 	cmdDesc := cmds.NewCommandDescription(
@@ -67,10 +69,9 @@ Examples:
 	return &Ttc2TtfCommand{CommandDescription: cmdDesc}, nil
 }
 
-func (c *Ttc2TtfCommand) RunIntoGlazeProcessor(
-	ctx context.Context,
+func (c *Ttc2TtfCommand) Run(
+	_ context.Context,
 	vals *values.Values,
-	_ middlewares.Processor,
 ) error {
 	s := &Ttc2TtfSettings{}
 	if err := vals.DecodeSectionInto(schema.DefaultSlug, s); err != nil {

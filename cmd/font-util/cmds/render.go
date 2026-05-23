@@ -14,7 +14,6 @@ import (
 	"github.com/go-go-golems/glazed/pkg/cmds/fields"
 	"github.com/go-go-golems/glazed/pkg/cmds/schema"
 	"github.com/go-go-golems/glazed/pkg/cmds/values"
-	"github.com/go-go-golems/glazed/pkg/middlewares"
 )
 
 type RenderCommand struct {
@@ -34,6 +33,9 @@ type RenderSettings struct {
 	PointSize    float64 `glazed:"point-size"`
 }
 
+// Verify interface compliance
+var _ cmds.BareCommand = (*RenderCommand)(nil)
+
 func NewRenderCommand() (*RenderCommand, error) {
 	cmdDesc := cmds.NewCommandDescription(
 		"render",
@@ -49,7 +51,6 @@ Examples:
   font-util render --yaml-template practice.yaml
   font-util render --font ./font.otf --text "A,V,AV,To,fi,office" --blank-lines 3 --out practice.pdf
   font-util render --yaml-template practice.yaml --dry-run
-  font-util render --font ./font.otf --text "AV" --debug-shaping
   font-util render --font fonts.ttc --font-index 1 --text "AV"
 `),
 		cmds.WithFlags(
@@ -119,10 +120,9 @@ Examples:
 	return &RenderCommand{CommandDescription: cmdDesc}, nil
 }
 
-func (c *RenderCommand) RunIntoGlazeProcessor(
-	ctx context.Context,
+func (c *RenderCommand) Run(
+	_ context.Context,
 	vals *values.Values,
-	_ middlewares.Processor,
 ) error {
 	s := &RenderSettings{}
 	if err := vals.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
