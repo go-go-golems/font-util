@@ -2,7 +2,10 @@ package cmds
 
 import (
 	"context"
+	"fmt"
+	"os"
 
+	"github.com/go-go-golems/font-util/pkg/ttc"
 	"github.com/go-go-golems/glazed/pkg/cli"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/fields"
@@ -88,11 +91,31 @@ func (c *Ttc2TtfCommand) RunIntoGlazeProcessor(
 		return err
 	}
 
-	// Stub: will be replaced with actual extraction logic
-	row := types.NewRow(
-		types.MRP("status", "not yet implemented"),
-		types.MRP("input_file", s.InputFile),
-		types.MRP("output_dir", s.OutputDir),
-	)
-	return gp.AddRow(ctx, row)
+	if s.InputFile == "" {
+		return fmt.Errorf("input-file is required")
+	}
+
+	// Check input file exists
+	if _, err := os.Stat(s.InputFile); err != nil {
+		return fmt.Errorf("input file not found: %s", s.InputFile)
+	}
+
+	outputPaths, fontNames, err := ttc.ExtractAllFonts(s.InputFile, s.OutputDir, s.Force)
+	if err != nil {
+		return err
+	}
+
+	// Emit one summary row per extracted font
+	for i, outputPath := range outputPaths {
+		row := types.NewRow(
+			types.MRP("index", i),
+			types.MRP("name", fontNames[i]),
+			types.MRP("output", outputPath),
+		)
+		if err := gp.AddRow(ctx, row); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
