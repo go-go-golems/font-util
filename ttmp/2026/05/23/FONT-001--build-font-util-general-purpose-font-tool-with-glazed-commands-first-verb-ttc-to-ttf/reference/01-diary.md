@@ -663,3 +663,70 @@ The Glazed output pipeline adds ~60 flags (--output, --fields, --filter, --templ
 ### Technical details
 **Commit:** 9df66be
 **Lines removed:** 199 → 97 net reduction
+
+---
+
+## Step 11: In-memory TTC extraction, --font-index, integration tests
+
+Replaced the temp-file TTC hack with in-memory extraction via `ExtractFontBytes`, added `--font-index` flag to inspect-font and render, and added CLI integration tests.
+
+**Commit (code):** 19dcc1c
+
+### Prompt Context
+
+**User prompt (verbatim):** "go ahead."
+
+**Assistant interpretation:** Implement the next steps from the previous session: --font-index for TTC selection, native TTC support in fontmetrics (in-memory), CLI integration tests.
+
+**Inferred user intent:** Polish the tool by eliminating the temp-file hack and making TTC font selection configurable.
+
+### What I did
+- Added `ExtractFontBytes` to `pkg/ttc/writer.go`: reassembles a standalone TTF byte slice in-memory. `ExtractFont` now delegates to `ExtractFontBytes` then writes the bytes.
+- Replaced temp-file hack in `loadFont` (helpers.go) with `ExtractFontBytes` + `fontmetrics.LoadBytes`. No more `os.CreateTemp` / `os.Remove` / `tmpFile.Close` dance.
+- `loadFont` now accepts a `fontIndex int` parameter (0-based, -1 = first).
+- Added `--font-index` flag (default 0) to both `inspect-font` and `render` commands.
+- Out-of-range index gives clear error: "font index 99 out of range (TTC has 9 fonts)"
+- Added 2 ttc package tests:
+  - `TestExtractFontBytesRoundTrip`: extracts Futura-Bold in-memory, validates SFNT version and NumTables
+  - `TestExtractFontBytesVersusFile`: byte-for-byte comparison — both methods produce identical output
+- Added 4 CLI integration tests in `commands_test.go`:
+  - `TestInspectFontOnSingleFont`: loads Go-Regular, checks metrics
+  - `TestLoadFontTTCWithIndex`: loads GillSans font 0 ("Gill Sans") and font 1 ("Gill Sans Bold"), verifies names
+  - `TestIsTTCFile`: detects TTC vs TTF
+  - `TestInitTemplateCreatesFile`: creates and writes a template
+
+### Why
+The temp-file pattern was a pragmatic workaround but had edge cases and added I/O overhead. In-memory extraction is cleaner, faster, and eliminates the errcheck noise from unchecked `os.Remove`/`Close` returns.
+
+### What worked
+- `ExtractFontBytes` was a clean refactor — just moved the buffer-building logic out of `ExtractFont` into its own function, then had `ExtractFont` call it and write the result.
+- The byte-for-byte test proved the two code paths are identical.
+- `--font-index 5` on GillSans.ttc correctly loads "Gill Sans SemiBold Italic" (font 5 of 9).
+
+### What didn't work
+- N/A
+
+### What I learned
+- `fontmetrics.LoadBytes` already existed in the copied fontmetrics package — it takes `[]byte` and calls `sfnt.Parse`. This is exactly what we needed for in-memory TTC support.
+- The `--font-index` flag is clean because it's silently ignored for non-TTC files (loadFont just ignores it when the file isn't a TTC).
+
+### What was tricky to build
+- Nothing tricky — the refactor was mechanical and well-tested.
+
+### What warrants a second pair of eyes
+- N/A
+
+### What should be done in the future
+- Consider an `inspect-ttc` command that lists all fonts in a collection with their names and metrics (no extraction needed, just the parser)
+- Consider adding a `--list` flag to `ttc2ttf` that shows font names without extracting
+
+### Code review instructions
+- `go test ./...` — all 21 tests should pass (7 packages)
+- `go run ./cmd/font-util inspect-font GillSans.ttc --font-index 7 --output table` — should show "Gill Sans Light"
+- `go run ./cmd/font-util render --font GillSans.ttc --font-index 1 --text "Bold" --out /tmp/bold.pdf` — should create a PDF with Gill Sans Bold
+
+### Technical details
+
+**Test count:** 21 total (7 packages)
+**New tests:** 6 (2 ttc + 4 cmds)
+**Commit:** 19dcc1c

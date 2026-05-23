@@ -28,8 +28,8 @@
 - [x] Create Glazed commands: init-template, inspect-font, render
 - [x] Wire new commands into root and test
 - [x] Copy examples and run lint + test
-- [ ] Add ExtractFontBytes to pkg/ttc (in-memory extraction, no temp file)
-- [ ] Replace temp-file TTC hack in loadFont with in-memory ExtractFontBytes
-- [ ] Add --font-index flag to inspect-font and render for TTC font selection
-- [ ] Add CLI integration tests (ttc2ttf, inspect-font, render smoke)
-- [ ] Lint, test, commit, push
+- [x] Add ExtractFontBytes to pkg/ttc (in-memory extraction, no temp file)
+- [x] Replace temp-file TTC hack in loadFont with in-memory ExtractFontBytes
+- [x] Add --font-index flag to inspect-font and render for TTC font selection
+- [x] Add CLI integration tests (ttc2ttf, inspect-font, render smoke)
+- [x] Lint, test, commit, push
