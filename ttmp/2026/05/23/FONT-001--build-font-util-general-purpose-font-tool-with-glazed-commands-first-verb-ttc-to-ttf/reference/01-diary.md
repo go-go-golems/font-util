@@ -730,3 +730,67 @@ The temp-file pattern was a pragmatic workaround but had edge cases and added I/
 **Test count:** 21 total (7 packages)
 **New tests:** 6 (2 ttc + 4 cmds)
 **Commit:** 19dcc1c
+
+---
+
+## Step 12: inspect-ttc, --list, OTC/CFF, native TTC in fontmetrics
+
+Implemented 4 improvements in one pass: new `inspect-ttc` GlazeCommand, `--list` flag on `ttc2ttf`, `.otf` extension for CFF fonts, and native TTC support in fontmetrics via `opentype.ParseCollection`.
+
+**Commit (code):** 3c7cf2e
+
+### Prompt Context
+
+**User prompt (verbatim):** "do 2. 1. 4. 6." (referring to the numbered improvements list from Step 11)
+
+**Assistant interpretation:** Implement: (2) inspect-ttc command, (1) --list flag on ttc2ttf, (4) OTC/CFF extension support, (6) native TTC in fontmetrics.
+
+**Inferred user intent:** Add the four most useful improvements from the backlog.
+
+### What I did
+- Created `inspect-ttc` as a GlazeCommand (with full Glazed output support): lists index, name, sfnt_version, sfnt_type, tables, output_ext for each font in a TTC
+- Added `--list` flag to `ttc2ttf` (BareCommand): prints font names, types, and table counts without extracting
+- Fixed `ExtractAllFonts` in writer.go: uses `.otf` extension for CFF fonts (SFNTVersion = 0x4F54544F/"OTTO"), `.ttf` for TrueType
+- Added `LoadFromTTC` to fontmetrics: uses `opentype.ParseCollection` for the sfnt.Font (native TTC support), then uses our `ExtractFontBytes` for raw bytes so `parseOS2` reads the correct font's OS/2 table
+- Simplified `loadFont` in helpers.go: just calls `fontmetrics.LoadFromTTC(data, fontIndex)` for TTC files
+- Added 2 new tests: `TestLoadFromTTC` (fontmetrics), `TestOtfExtensionForCFF` (ttc)
+- Updated README with all 5 commands
+
+### Why
+These are the 4 most impactful improvements from the backlog. inspect-ttc and --list are high-visibility quality-of-life features. OTC support is a correctness fix. Native TTC support eliminates the remaining extraction overhead.
+
+### What worked
+- `opentype.ParseCollection` + `coll.Font(i)` returns a proper `*sfnt.Font` — exactly what we need
+- The two-source approach (ParseCollection for sfnt.Font + ExtractFontBytes for raw bytes) gives correct OS/2 metrics without temp files
+- The `--list` flag was trivial — just parse the TTC and print names instead of extracting
+
+### What didn't work
+- First attempt at `LoadFromTTC` passed the full TTC data to `Extract()`, which caused `parseOS2` to read the first font's OS/2 table regardless of fontIndex. Fixed by extracting the individual font's bytes first.
+- Initial implementation tried to use `opentype.Font` fields directly (Name, UnitsPerEm, GlyphCount, HMetric, VMetric) — but `opentype.Font` is just `sfnt.Font`, which doesn't have those fields. Had to go back to using our own `Extract()`.
+
+### What I learned
+- `opentype.Collection.Font(i)` returns `(*sfnt.Font, error)` — same type we already use everywhere. The "native TTC support" is just using this API instead of extracting to bytes and calling `sfnt.Parse`.
+- The OS/2 table offset in a TTC is relative to each font's offset table, not the file start. Our `parseOS2` function works on raw bytes starting from offset 0, so it needs the extracted standalone font bytes.
+
+### What was tricky to build
+- The `LoadFromTTC` implementation needs both `opentype.ParseCollection` (for the sfnt.Font) AND our own `ttc.Parse` + `ttc.ExtractFontBytes` (for the raw bytes). This means we parse the TTC twice, but it's still fast and avoids temp files.
+
+### What warrants a second pair of eyes
+- The double-parse in `LoadFromTTC` — we parse with both `opentype.ParseCollection` and our `ttc.Parse`. Could we get the sfnt.Font from our own parser? Not easily — our parser returns structured metadata, not a live sfnt.Font. The double-parse is acceptable.
+
+### What should be done in the future
+- Head table checkSumAdjustment recomputation (open question from design doc)
+- Mac Roman encoding fallback in name extraction
+- More CLI integration tests
+
+### Code review instructions
+- `go run ./cmd/font-util inspect-ttc GillSans.ttc` — should list 9 fonts with types and extensions
+- `go run ./cmd/font-util ttc2ttf GillSans.ttc --list` — should list without extracting
+- `go run ./cmd/font-util inspect-font GillSans.ttc --font-index 7` — should show "Gill Sans Light" with os2 source
+- `make lint && make test` — all clean
+
+### Technical details
+
+**Commands now:** 5 (ttc2ttf, inspect-ttc, inspect-font, init-template, render)
+**Test count:** 24 across 8 packages
+**Commit:** 3c7cf2e

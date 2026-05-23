@@ -42,3 +42,8 @@ Integrated typo-copy-generator: 5 packages copied, 3 Glazed commands created (in
 
 Added in-memory TTC extraction (ExtractFontBytes), --font-index flag for inspect-font and render, 6 new tests (21 total). Commit: 19dcc1c
 
+
+## 2026-05-23
+
+Added inspect-ttc command, --list flag on ttc2ttf, OTC/CFF extension support (.otf), native TTC in fontmetrics via opentype.ParseCollection. Commit: 3c7cf2e
+
