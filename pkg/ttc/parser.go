@@ -271,7 +271,7 @@ func sanitizeFilename(s string) string {
 			result = append(result, c)
 		case c == ' ':
 			result = append(result, '-')
-		// Skip all other characters
+			// Skip all other characters
 		}
 	}
 	return string(result)
@@ -283,14 +283,14 @@ func fallbackName(index int) string {
 
 // CalcSearchFields computes the binary search optimization fields
 // for a table directory with numTables entries.
-func CalcSearchFields(numTables uint16) (searchRange, entrySelector, rangeShift uint16) {
+func CalcSearchFields(numTables uint16) (uint16, uint16, uint16) {
 	power := uint16(1)
-	entrySelector = 0
+	entrySelector := uint16(0)
 	for power*2 <= numTables {
 		power *= 2
 		entrySelector++
 	}
-	searchRange = power * 16
-	rangeShift = numTables*16 - searchRange
-	return
+	searchRange := power * 16
+	rangeShift := numTables*16 - searchRange
+	return searchRange, entrySelector, rangeShift
 }

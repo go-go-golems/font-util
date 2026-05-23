@@ -293,3 +293,66 @@ The user wants working code, not just design docs. The TTC files provide real te
 - Didot.ttc: 724,008 bytes
 - Futura.ttc: 487,620 bytes
 - GillSans.ttc: 1,254,028 bytes
+
+---
+
+## Step 5: Phase 1 Implementation — Project Skeleton (Tasks 1.1–1.8)
+
+Implemented all Phase 1 tasks: renamed the Go module, restructured directories, added Glazed/Cobra dependencies, created the ttc2ttf command stub with full flag definitions and help text, updated all config files (goreleaser, Makefile, AGENT.md), and verified the binary compiles and `--help` works correctly.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 4)
+
+**Assistant interpretation:** Execute all tasks sequentially, commit at natural boundaries.
+
+**Inferred user intent:** Get the project skeleton working so we can iterate on the actual font parsing logic.
+
+**Commit (code):** 774777e — "feat: project skeleton - rename module, add Glazed CLI with ttc2ttf stub"
+
+### What I did
+- Task 1.1: Renamed Go module from `github.com/go-go-golems/XXX` to `github.com/go-go-golems/font-util` in go.mod
+- Task 1.2: Moved `cmd/XXX/` to `cmd/font-util/`
+- Task 1.3: Added Glazed v1.2.14, Clay v0.4.9, Cobra v1.10.2, pkg/errors v0.9.1
+- Task 1.4: Created `pkg/ttc/` directory
+- Task 1.5: Removed empty `pkg/doc.go`
+- Task 1.6: Updated `.goreleaser.yaml` — project_name, binary, main paths, homepage, brew name all changed from XXX to font-util
+- Task 1.7: Updated `Makefile` — replaced XXX_BINARY with FONT_UTIL_BINARY, added `run` target, updated install target, updated release module path
+- Task 1.8: Updated `AGENT.md` — module name, binary name, build commands, project structure
+- Created `cmd/font-util/cmds/ttc2ttf.go` with full Glazed command definition (flags, arguments, sections, help text)
+- Created `cmd/font-util/main.go` with root Cobra command, logging, help system, ttc2ttf wiring
+- Verified: `go build ./...` succeeds, `go run ./cmd/font-util --help` shows help, `go run ./cmd/font-util ttc2ttf --help` shows ttc2ttf help with all Glazed output flags
+
+### Why
+The skeleton needs to compile and show help before we can add the actual parsing logic.
+
+### What worked
+- Everything compiled on the first attempt after `go mod tidy`
+- The Glazed framework automatically provides all output formatting flags (--output, --fields, --filter, etc.)
+- The `--log-level` flag comes free from the logging section
+
+### What didn't work
+- Initially forgot to run `go mod tidy` after adding imports — got "no required module provides package" errors. Fixed by running `go mod tidy`.
+
+### What I learned
+- The Glazed CLI framework provides an enormous amount of functionality out of the box: 60+ flags for output formatting, filtering, templating, jq queries, pagination, etc. All free just by using `settings.NewGlazedSchema()` and `cli.NewCommandSettingsSection()`.
+
+### What was tricky to build
+- Nothing tricky in Phase 1 — it's mechanical skeleton work.
+
+### What warrants a second pair of eyes
+- The `.goreleaser.yaml` has CGO_ENABLED=1 set. This is the default from the template but might not be needed for font-util (no C dependencies). Could change to CGO_ENABLED=0 for simpler static builds. However, leaving it as-is is safe.
+
+### What should be done in the future
+- Consider CGO_ENABLED=0 for simpler cross-compilation
+
+### Code review instructions
+- Run `go build ./...` and `go run ./cmd/font-util ttc2ttf --help`
+- Check `.goreleaser.yaml` project_name is `font-util`
+- Check `go.mod` module is `github.com/go-go-golems/font-util`
+
+### Technical details
+
+**Commit:** 774777e
+**Glazed version:** v1.2.14
+**Cobra version:** v1.10.2

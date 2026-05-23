@@ -1,58 +1,55 @@
-# GO GO TEMPLATE
+# font-util
 
-```
- _______  _______    _______  _______ 
-|       ||       |  |       ||       |
-|    ___||   _   |  |    ___||   _   |
-|   | __ |  | |  |  |   | __ |  | |  |
-|   ||  ||  |_|  |  |   ||  ||  |_|  |
-|   |_| ||       |  |   |_| ||       |
-|_______||_______|  |_______||_______|
- _______  _______  __   __  _______  ___      _______  _______  _______ 
-|       ||       ||  |_|  ||       ||   |    |   _   ||       ||       |
-|_     _||    ___||       ||    _  ||   |    |  |_|  ||_     _||    ___|
-  |   |  |   |___ |       ||   |_| ||   |    |       |  |   |  |   |___ 
-  |   |  |    ___||       ||    ___||   |___ |       |  |   |  |    ___|
-  |   |  |   |___ | ||_|| ||   |    |       ||   _   |  |   |  |   |___ 
-  |___|  |_______||_|   |_||___|    |_______||__| |__|  |___|  |_______|
+A general-purpose font manipulation tool built on the [Glazed](https://github.com/go-go-golems/glazed) commands framework.
+
+## Installation
+
+```bash
+go install github.com/go-go-golems/font-util/cmd/font-util@latest
 ```
 
----
+## Commands
 
+### ttc2ttf
+
+Extract individual TTF files from a TrueType Collection (.ttc) file.
+
+```bash
+# Extract all fonts from a TTC into the current directory
+font-util ttc2ttf fonts.ttc
+
+# Extract to a specific directory
+font-util ttc2ttf fonts.ttc --output-dir ./extracted
+
+# Overwrite existing files
+font-util ttc2ttf fonts.ttc --force
+
+# Get JSON output of extracted font names
+font-util ttc2ttf fonts.ttc --output json
 ```
- _______  _______    _______  _______ 
-|       ||       |  |       ||       |
-|    ___||   _   |  |    ___||   _   |
-|   | __ |  | |  |  |   | __ |  | |  |
-|   ||  ||  |_|  |  |   ||  ||  |_|  |
-|   |_| ||       |  |   |_| ||       |
-|_______||_______|  |_______||_______|
- _______  _______  ___      _______  __   __  _______ 
-|       ||       ||   |    |       ||  |_|  ||       |
-|    ___||   _   ||   |    |    ___||       ||  _____|
-|   | __ |  | |  ||   |    |   |___ |       || |_____ 
-|   ||  ||  |_|  ||   |___ |    ___||       ||_____  |
-|   |_| ||       ||       ||   |___ | ||_|| | _____| |
-|_______||_______||_______||_______||_|   |_||_______|
- __   __  _______  ___   _  _______    __   __  _______  ______   _______ 
-|  |_|  ||   _   ||   | | ||       |  |  |_|  ||       ||    _ | |       |
-|       ||  |_|  ||   |_| ||    ___|  |       ||   _   ||   | || |    ___|
-|       ||       ||      _||   |___   |       ||  | |  ||   |_|| |   |___ 
-|       ||       ||     |_ |    ___|  |       ||  |_|  ||    __ ||    ___|
-| ||_|| ||   _   ||    _  ||   |___   | ||_|| ||       ||   |  |||   |___ 
-|_|   |_||__| |__||___| |_||_______|  |_|   |_||_______||___|  |||_______|
- _______  _______    _______  _______ 
-|       ||       |  |       ||       |
-|    ___||   _   |  |    ___||   _   |
-|   | __ |  | |  |  |   | __ |  | |  |
-|   ||  ||  |_|  |  |   ||  ||  |_|  |
-|   |_| ||       |  |   |_| ||       |
-|_______||_______|  |_______||_______|
- _______  _______  ___      _______  __   __  _______ 
-|       ||       ||   |    |       ||  |_|  ||       |
-|    ___||   _   ||   |    |    ___||       ||  _____|
-|   | __ |  | |  ||   |    |   |___ |       || |_____ 
-|   ||  ||  |_|  ||   |___ |    ___||       ||_____  |
-|   |_| ||       ||       ||   |___ | ||_|| | _____| |
-|_______||_______||_______||_______||_|   |_||_______|
+
+Output files are named using the PostScript name (Name ID 6) from each font's `name` table, e.g., `GillSans-Bold.ttf`, `Futura-Medium.ttf`.
+
+## Output Formats
+
+All commands support Glazed output formats:
+
+```bash
+font-util ttc2ttf fonts.ttc --output table   # default
+font-util ttc2ttf fonts.ttc --output json
+font-util ttc2ttf fonts.ttc --output yaml
+font-util ttc2ttf fonts.ttc --output csv
+font-util ttc2ttf fonts.ttc --output markdown
 ```
+
+## Build
+
+```bash
+make build
+make test
+make lint
+```
+
+## License
+
+MIT
