@@ -37,3 +37,8 @@ Completed full implementation: TTC parser, TTF writer, ttc2ttf command, tests pa
 
 Integrated typo-copy-generator: 5 packages copied, 3 Glazed commands created (init-template, inspect-font, render), TTC support added, lint clean, all tests pass. Commits: 41d915b, fc16756
 
+
+## 2026-05-23
+
+Added in-memory TTC extraction (ExtractFontBytes), --font-index flag for inspect-font and render, 6 new tests (21 total). Commit: 19dcc1c
+
