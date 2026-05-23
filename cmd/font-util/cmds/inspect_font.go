@@ -1,0 +1,188 @@
+package cmds
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/go-go-golems/font-util/pkg/fontmetrics"
+	"github.com/go-go-golems/font-util/pkg/shape"
+	"github.com/go-go-golems/font-util/pkg/ttc"
+	"github.com/go-go-golems/glazed/pkg/cli"
+	"github.com/go-go-golems/glazed/pkg/cmds"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
+	"github.com/go-go-golems/glazed/pkg/middlewares"
+	"github.com/go-go-golems/glazed/pkg/settings"
+	"github.com/go-go-golems/glazed/pkg/types"
+)
+
+type InspectFontCommand struct {
+	*cmds.CommandDescription
+}
+
+type InspectFontSettings struct {
+	Font      string  `glazed:"font"`
+	Texts     string  `glazed:"text"`
+	PointSize float64 `glazed:"point-size"`
+}
+
+func NewInspectFontCommand() (*InspectFontCommand, error) {
+	glazedSection, err := settings.NewGlazedSchema()
+	if err != nil {
+		return nil, err
+	}
+
+	commandSettingsSection, err := cli.NewCommandSettingsSection()
+	if err != nil {
+		return nil, err
+	}
+
+	cmdDesc := cmds.NewCommandDescription(
+		"inspect-font",
+		cmds.WithShort("Inspect font metrics and shaping widths"),
+		cmds.WithLong(`
+Load an OpenType/TrueType font and print its metrics (ascender, descender,
+x-height, cap height, etc.) and optionally shape text examples to see
+glyph counts, advance widths, and missing glyphs.
+
+Examples:
+  font-util inspect-font --font ./font.otf
+  font-util inspect-font --font ./font.otf --text "AV,To,fi,office" --output json
+  font-util inspect-font --font ./font.otf --point-size 48
+`),
+		cmds.WithFlags(
+			fields.New(
+				"font",
+				fields.TypeString,
+				fields.WithHelp("Path to the font file"),
+				fields.WithIsArgument(true),
+			),
+			fields.New(
+				"text",
+				fields.TypeString,
+				fields.WithDefault(""),
+				fields.WithHelp("Comma-separated text examples to shape"),
+			),
+			fields.New(
+				"point-size",
+				fields.TypeFloat,
+				fields.WithDefault(54.0),
+				fields.WithHelp("Point size for shaping examples"),
+			),
+		),
+		cmds.WithSections(glazedSection, commandSettingsSection),
+	)
+
+	return &InspectFontCommand{CommandDescription: cmdDesc}, nil
+}
+
+func (c *InspectFontCommand) RunIntoGlazeProcessor(
+	ctx context.Context,
+	vals *values.Values,
+	gp middlewares.Processor,
+) error {
+	s := &InspectFontSettings{}
+	if err := vals.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
+		return err
+	}
+
+	if s.Font == "" {
+		return fmt.Errorf("--font is required")
+	}
+
+	var loaded *fontmetrics.Loaded
+
+	// Detect TTC files and extract the first font for inspection
+	if isTTCFile(s.Font) {
+		ttcFile, err := ttc.ParseFile(s.Font)
+		if err != nil {
+			return fmt.Errorf("parsing TTC: %w", err)
+		}
+		if len(ttcFile.Fonts) == 0 {
+			return fmt.Errorf("TTC contains no fonts")
+		}
+		// Extract the first font to a temp file for metrics inspection
+		tmpFile, err := os.CreateTemp("", "font-util-inspect-*.ttf")
+		if err != nil {
+			return err
+		}
+		defer func() { _ = os.Remove(tmpFile.Name()) }()
+		if err := ttc.ExtractFont(ttcFile.Data, ttcFile.Fonts[0], tmpFile.Name()); err != nil {
+			return fmt.Errorf("extracting font from TTC: %w", err)
+		}
+		_ = tmpFile.Close()
+		loaded, err = fontmetrics.Load(tmpFile.Name())
+		if err != nil {
+			return err
+		}
+	} else {
+		var err error
+		loaded, err = fontmetrics.Load(s.Font)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Emit metrics as a row
+	row := types.NewRow(
+		types.MRP("font_name", loaded.Metrics.FontName),
+		types.MRP("units_per_em", loaded.Metrics.UnitsPerEm),
+		types.MRP("glyph_count", loaded.Metrics.GlyphCount),
+		types.MRP("ascender", loaded.Metrics.Ascender),
+		types.MRP("descender", loaded.Metrics.Descender),
+		types.MRP("line_gap", loaded.Metrics.LineGap),
+		types.MRP("x_height", loaded.Metrics.XHeight),
+		types.MRP("cap_height", loaded.Metrics.CapHeight),
+		types.MRP("source", loaded.Metrics.Source),
+	)
+	if err := gp.AddRow(ctx, row); err != nil {
+		return err
+	}
+
+	// Shape text examples if provided
+	if s.Texts != "" {
+		sh := shape.NewWithBytes(loaded.Bytes, loaded.Font, loaded.Metrics)
+		for _, t := range splitCSV(s.Texts) {
+			r, err := sh.Shape(t, shape.Options{PointSize: s.PointSize, Kern: true, Liga: true})
+			if err != nil {
+				return err
+			}
+			shapingRow := types.NewRow(
+				types.MRP("font_name", loaded.Metrics.FontName),
+				types.MRP("text", r.Text),
+				types.MRP("glyphs", len(r.Glyphs)),
+				types.MRP("advance_pt", fmt.Sprintf("%.2f", r.AdvancePt)),
+				types.MRP("missing_glyphs", r.MissingGlyphs),
+				types.MRP("engine", r.Engine),
+			)
+			if err := gp.AddRow(ctx, shapingRow); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func splitCSV(s string) []string {
+	var out []string
+	for _, p := range strings.Split(s, ",") {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// isTTCFile checks if a file has the TTC magic bytes.
+func isTTCFile(path string) bool {
+	data, err := os.ReadFile(path)
+	if err != nil || len(data) < 4 {
+		return false
+	}
+	return string(data[0:4]) == "ttcf"
+}

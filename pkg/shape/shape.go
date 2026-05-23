@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"unicode/utf8"
 
+	"github.com/go-go-golems/font-util/pkg/fontmetrics"
 	gtfont "github.com/go-text/typesetting/font"
 	"github.com/go-text/typesetting/harfbuzz"
-	"github.com/go-go-golems/font-util/pkg/fontmetrics"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/sfnt"
 	"golang.org/x/image/math/fixed"

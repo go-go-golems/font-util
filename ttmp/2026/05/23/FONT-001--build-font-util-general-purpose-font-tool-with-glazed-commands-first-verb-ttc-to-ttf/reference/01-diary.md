@@ -459,3 +459,71 @@ Clean lint and tests are required before any release. README is the first thing 
 
 ### Technical details
 All 20 tasks completed. All checks pass.
+
+---
+
+## Step 8: Integrating typo-copy-generator into font-util
+
+The user asked to integrate the functionality of `~/code/wesen/2026-05-22--typo-copy-generator/` into font-util. This is a standalone Go CLI that creates printable typography copy-practice PDFs from OpenType/TrueType fonts and YAML worksheet templates. It has 3 subcommands: `init-template`, `inspect-font`, `render`. The code is in `internal/` packages: fontmetrics, spec, shape, layout, renderpdf. I will copy these packages verbatim into `pkg/` and then adapt the CLI layer to use Glazed commands.
+
+### Prompt Context
+
+**User prompt (verbatim):** "ok, now integrate the functionality of ~/code/wesen/2026-05-22--typo-copy-generator/ into this tool as well, you can literally copy it verbatim and then adapt if you want."
+
+**Assistant interpretation:** Copy the typo-copy-generator packages into font-util's pkg/ directory, adapt the module path imports, and wrap the 3 subcommands (init-template, inspect-font, render) as Glazed commands.
+
+**Inferred user intent:** Consolidate both font tools into a single font-util binary. The copy-practice PDF generator becomes another verb group under font-util.
+
+### What I did
+- Inspected all source files in typo-copy-generator: 6 Go packages + main + examples
+- Identified the packages to copy: fontmetrics, spec, shape, layout, renderpdf
+- Identified the CLI subcommands to convert: init-template, inspect-font, render
+- Identified additional dependencies: go-pdf/fpdf, go-text/typesetting, golang.org/x/image, gopkg.in/yaml.v3
+- Started copying packages
+
+### Why
+Consolidating into one binary is more convenient than maintaining two separate tools, and the font-util name covers this functionality well.
+
+### What worked
+- The typo-copy-generator code is well-structured with clean package boundaries
+- Tests are self-contained (use gofont/goregular embedded test data)
+
+### What didn't work
+- N/A (investigation phase)
+
+### What I learned
+- The typo-copy-generator uses `github.com/go-text/typesetting/harfbuzz` for HarfBuzz shaping, with a fallback SFNT kerning path. This is a heavy dependency but important for proper ligature/kerning rendering.
+- The renderpdf package uses `github.com/go-pdf/fpdf` for PDF generation with vector glyph outlines.
+- The spec package handles YAML template parsing with comprehensive defaults.
+
+### What was tricky to build
+- N/A yet
+
+### What warrants a second pair of eyes
+- The go-text/typesetting dependency is large. Need to verify it doesn't cause build issues.
+
+### What should be done in the future
+- Copy packages, fix imports, add Glazed commands, wire into root
+
+### Code review instructions
+- Compare copied packages against originals to verify no content was lost
+
+### Technical details
+
+**Source packages to copy:**
+- `internal/fontmetrics` → `pkg/fontmetrics` (font loading, OS/2 metrics extraction, scaling)
+- `internal/spec` → `pkg/spec` (YAML template parsing, defaults, validation, resolution)
+- `internal/shape` → `pkg/shape` (HarfBuzz shaping + SFNT kern fallback)
+- `internal/layout` → `pkg/layout` (page layout, row/cell placement, page breaks)
+- `internal/renderpdf` → `pkg/renderpdf` (fpdf rendering, glyph vector drawing, helper lines)
+
+**Dependencies to add:**
+- `github.com/go-pdf/fpdf v0.9.0`
+- `github.com/go-text/typesetting v0.3.4`
+- `golang.org/x/image v0.41.0`
+- `gopkg.in/yaml.v3 v3.0.1`
+
+**Commands to create:**
+- `font-util init-template` (bare command - writes YAML file)
+- `font-util inspect-font` (row-emitting - outputs metrics/shaping data)
+- `font-util render` (bare command - writes PDF file)

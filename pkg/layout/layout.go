@@ -41,7 +41,7 @@ func Build(rs spec.Resolved, m fontmetrics.Metrics, sh shape.Shaper) (Document, 
 	w, h := pageSize(rs.Page.Size, rs.Page.Orientation)
 	doc := Document{PageSizeName: rs.Page.Size, PageWidth: w, PageHeight: h, Metrics: m, Pages: []Page{{Number: 1}}}
 	scale := rs.PointSize / float64(m.UnitsPerEm)
-	above := max(float64(m.Ascender), float64(m.CapHeight)) * scale
+	above := maxf(float64(m.Ascender), float64(m.CapHeight)) * scale
 	below := -float64(m.Descender) * scale
 	if below < 0 {
 		below = 0
@@ -130,7 +130,7 @@ func placeCellItems(texts []string, left, right float64, columns int, cellGap fl
 			return nil, err
 		}
 		cellX := left + float64(i)*(cellW+cellGap)
-		x := cellX + max(0, (cellW-r.AdvancePt)/2)
+		x := cellX + maxf(0, (cellW-r.AdvancePt)/2)
 		items = append(items, Item{Text: t, X: x, Run: r})
 	}
 	return items, nil
@@ -192,7 +192,7 @@ func pageSize(name, orient string) (float64, float64) {
 	return w, h
 }
 
-func max(a, b float64) float64 {
+func maxf(a, b float64) float64 {
 	if a > b {
 		return a
 	}

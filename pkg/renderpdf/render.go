@@ -5,11 +5,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-pdf/fpdf"
 	"github.com/go-go-golems/font-util/pkg/fontmetrics"
 	"github.com/go-go-golems/font-util/pkg/layout"
 	"github.com/go-go-golems/font-util/pkg/shape"
 	"github.com/go-go-golems/font-util/pkg/spec"
+	"github.com/go-pdf/fpdf"
 	"golang.org/x/image/font/sfnt"
 	"golang.org/x/image/math/fixed"
 )

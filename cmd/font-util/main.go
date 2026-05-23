@@ -30,13 +30,41 @@ func main() {
 	helpSystem := help.NewHelpSystem()
 	help_cmd.SetupCobraRootCommand(helpSystem, rootCmd)
 
+	// ttc2ttf command
 	ttc2ttfCmd, err := cmds.NewTtc2TtfCommand()
 	cobra.CheckErr(err)
-	cobraCmd, err := cli.BuildCobraCommand(ttc2ttfCmd,
+	ttc2ttfCobra, err := cli.BuildCobraCommand(ttc2ttfCmd,
 		cli.WithParserConfig(cli.CobraParserConfig{AppName: "font-util"}),
 	)
 	cobra.CheckErr(err)
-	rootCmd.AddCommand(cobraCmd)
+	rootCmd.AddCommand(ttc2ttfCobra)
+
+	// init-template command
+	initTemplateCmd, err := cmds.NewInitTemplateCommand()
+	cobra.CheckErr(err)
+	initTemplateCobra, err := cli.BuildCobraCommand(initTemplateCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{AppName: "font-util"}),
+	)
+	cobra.CheckErr(err)
+	rootCmd.AddCommand(initTemplateCobra)
+
+	// inspect-font command
+	inspectFontCmd, err := cmds.NewInspectFontCommand()
+	cobra.CheckErr(err)
+	inspectFontCobra, err := cli.BuildCobraCommand(inspectFontCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{AppName: "font-util"}),
+	)
+	cobra.CheckErr(err)
+	rootCmd.AddCommand(inspectFontCobra)
+
+	// render command
+	renderCmd, err := cmds.NewRenderCommand()
+	cobra.CheckErr(err)
+	renderCobra, err := cli.BuildCobraCommand(renderCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{AppName: "font-util"}),
+	)
+	cobra.CheckErr(err)
+	rootCmd.AddCommand(renderCobra)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
