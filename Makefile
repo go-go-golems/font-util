@@ -1,14 +1,10 @@
 .PHONY: gifs
 
-all: gifs
+all: build
 
-VERSION=v0.1.14
+VERSION=v0.1.0
 GORELEASER_ARGS ?= --skip=sign --snapshot --clean
 GORELEASER_TARGET ?= --single-target
-
-TAPES=$(wildcard doc/vhs/*tape)
-gifs: $(TAPES)
-	for i in $(TAPES); do vhs < $$i; done
 
 docker-lint:
 	docker run --rm -v $(shell pwd):/app -w /app golangci/golangci-lint:latest golangci-lint run -v
@@ -34,6 +30,9 @@ build:
 	GOWORK=off go generate ./...
 	GOWORK=off go build ./...
 
+run:
+	GOWORK=off go run ./cmd/font-util
+
 goreleaser:
 	GOWORK=off goreleaser release $(GORELEASER_ARGS) $(GORELEASER_TARGET)
 
@@ -48,14 +47,14 @@ tag-patch:
 
 release:
 	git push origin --tags
-	GOWORK=off GOPROXY=proxy.golang.org go list -m github.com/go-go-golems/XXX@$(shell svu current)
+	GOWORK=off GOPROXY=proxy.golang.org go list -m github.com/go-go-golems/font-util@$(shell svu current)
 
 bump-glazed:
 	GOWORK=off go get github.com/go-go-golems/glazed@latest
 	GOWORK=off go get github.com/go-go-golems/clay@latest
 	GOWORK=off go mod tidy
 
-XXX_BINARY=$(shell which XXX)
+FONT_UTIL_BINARY=$(shell which font-util)
 install:
-	GOWORK=off go build -o ./dist/XXX ./cmd/XXX && \
-		cp ./dist/XXX $(XXX_BINARY)
+	GOWORK=off go build -o ./dist/font-util ./cmd/font-util && \
+		cp ./dist/font-util $(FONT_UTIL_BINARY)

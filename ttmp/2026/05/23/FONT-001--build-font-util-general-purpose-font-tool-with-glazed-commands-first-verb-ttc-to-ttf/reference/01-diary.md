@@ -1,0 +1,295 @@
+---
+type: reference
+title: Diary
+status: active
+intent: long-term
+topics:
+  - fonts
+  - glazed
+  - cli
+  - go
+  - binary-parsing
+created: 2026-05-23
+owners: []
+ticket: FONT-001
+---
+
+# Diary
+
+## Goal
+
+Capture the step-by-step investigation, design, and documentation journey for building `font-util` — a general-purpose font tool built on the Glazed commands framework, with the first verb being TTC-to-TTF conversion.
+
+## Step 1: Ticket Creation and Evidence Gathering
+
+This step covers the initial ticket creation, codebase inspection, and external research needed to produce the implementation guide. The font-util repo exists as a bare go-go-golems template (module `github.com/go-go-golems/XXX`, empty `main.go`, empty `pkg/doc.go`). The task is to design the full system before writing any code, and produce an intern-ready implementation guide.
+
+### Prompt Context
+
+**User prompt (verbatim):** "Create a new docmgr ticket to build a font-util general purpose tool using glazed commands framework, with the first verb being to convert ttc to ttf files (just barecommand). Create a detailed implementation guide. Create a detailed analysis / design / implementation guide that is for a new intern, explaining all the parts of the system needed to understand what it is, with prose paragraphs and bullet points and pseudocode and diagrams and api references and file references. It should be very clear and technical. Store in the ticket and then upload to remarkable. Keep a diary as you work. Don't work outside of this diary."
+
+**Assistant interpretation:** Create a docmgr ticket FONT-001 for building font-util, write a comprehensive intern-ready implementation guide covering all subsystems, store in the ticket, and upload to reMarkable. Keep a diary of all work.
+
+**Inferred user intent:** Have a complete, onboarding-quality design document that a new team member could use to implement font-util from scratch, without needing to ask questions about the Glazed framework, TTC binary format, or Go project structure conventions.
+
+### What I did
+
+- Read the glazed-command-authoring skill for current Glazed API patterns and import paths
+- Read the ticket-research-docmgr-remarkable and diary skills for workflow conventions
+- Inspected the font-util repo: empty template with `go.mod` (module `github.com/go-go-golems/XXX`), empty `cmd/XXX/main.go`, empty `pkg/doc.go`
+- Examined the glazed CLI root command pattern from `glazed/cmd/glaze/main.go`
+- Searched for Go libraries that parse TTC files: `golang.org/x/image/font/opentype.ParseCollection`, `github.com/ConradIrwin/font/sfnt`, `github.com/golang/freetype/truetype`
+- Researched TTC binary format specification from Microsoft OpenType docs and Apple TrueType Reference Manual
+- Created docmgr ticket FONT-001 with topics: fonts, glazed, cli, go, binary-parsing
+- Created design-doc "Implementation Guide" and reference "Diary"
+- Wrote the diary (this document) and the main implementation guide
+
+### Why
+
+The user wants a thorough design document that serves as a self-contained onboarding guide for an intern. This requires covering not just the font-util-specific code, but also the Glazed framework, the go-go-golems project conventions, the TTC binary format, and the full directory structure — everything an intern needs to implement the tool without prior context.
+
+### What worked
+
+- The glazed-command-authoring skill provided the exact current API patterns (import paths, constructor pattern, `RunIntoGlazeProcessor` signature)
+- The glazed `main.go` served as a concrete reference for root command wiring
+- The `golang.org/x/image/font/opentype.ParseCollection` API is well-documented and provides exactly what's needed for parsing TTC files
+- The TTC format specification from Microsoft is clear and implementable
+
+### What didn't work
+
+- The `ConradIrwin/font` library is older and less maintained than `golang.org/x/image`; decided to prefer the standard x/image library for the implementation guide
+- The freetype/truetype library also works but is lower-level; `opentype.ParseCollection` is the cleanest entry point for TTC parsing
+
+### What I learned
+
+- The `golang.org/x/image/font/opentype` package has `ParseCollection` which returns `*Collection` with `Fonts []Font` — this is the cleanest Go API for reading TTC files
+- However, `ParseCollection` returns parsed font objects, not raw bytes; for TTC-to-TTF extraction we actually need to work at the binary level (reading TTC header, offset tables, and reassembling individual TTF byte streams). The x/image library can validate/inspect but doesn't directly produce standalone TTF file bytes from a TTC.
+- This means the primary implementation approach should parse the TTC binary format directly, since we need to produce valid standalone TTF files (with corrected offset tables and table directory entries)
+- The go-go-golems template repo is very bare (module still named XXX, main.go is empty), so the guide needs to cover renaming the module and setting up the full directory structure
+
+### What was tricky to build
+
+- Understanding the distinction between "parsing a TTC for rendering" (what x/image does) vs "extracting individual TTF byte streams from a TTC" (what font-util needs). The x/image library parses fonts for rasterization; it doesn't provide a way to serialize back to standalone TTF. The binary-level approach is required.
+- The TTC format has shared tables between member fonts — extracting a single font requires copying both its private tables and any shared tables it references into the output TTF.
+
+### What warrants a second pair of eyes
+
+- The decision to implement TTC parsing at the binary level rather than wrapping `opentype.ParseCollection` — this is the right call for file extraction but worth confirming
+- The reassembly of the TTF offset table: the output file needs a new offset table with recalculated `searchRange`, `entrySelector`, and `rangeShift` values per the TrueType spec
+- Whether `golang.org/x/image/font/opentype` should still be used as a validation/inspection library (e.g., for a future `inspect` command)
+
+### What should be done in the future
+
+- Implement the `ttc2ttf` command per the guide
+- Add an `inspect` verb that uses `opentype.ParseCollection` for font metadata
+- Add WOFF/WOFF2 support in a future verb
+- Consider using `ConradIrwin/font/sfnt` for OTF/CFF-based collection (OTC) support
+
+### Code review instructions
+
+- Start at the implementation guide (design doc) for the full picture
+- Verify the TTC binary format description against the Microsoft OpenType spec
+- Check that the Glazed command wiring pattern matches the current glazed-command-authoring skill
+
+### Technical details
+
+**Key external references:**
+- Microsoft OpenType spec (TTC Header): https://learn.microsoft.com/en-us/typography/opentype/spec/otff
+- Apple TrueType Reference Manual: https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6.html
+- Go x/image/font/opentype: https://pkg.go.dev/golang.org/x/image/font/opentype
+- Go freetype/truetype: https://pkg.go.dev/github.com/golang/freetype/truetype
+
+**Key repo files inspected:**
+- `/home/manuel/code/wesen/go-go-golems/font-util/go.mod` — module still named `XXX`
+- `/home/manuel/code/wesen/go-go-golems/font-util/cmd/XXX/main.go` — empty main
+- `/home/manuel/code/wesen/go-go-golems/font-util/pkg/doc.go` — empty package
+- `/home/manuel/code/wesen/corporate-headquarters/glazed/cmd/glaze/main.go` — reference root command pattern
+
+**TTC binary format summary:**
+```
+TTC Header:
+  Tag:           "ttcf" (4 bytes)
+  MajorVersion:  uint16 (1)
+  MinorVersion:  uint16 (0)
+  NumFonts:      uint32
+  OffsetTable:   []uint32 (NumFonts entries, each points to an OffsetTable)
+  (Optional) DigitalSignature fields
+
+Per-font OffsetTable (at each offset):
+  SFNTVersion:   uint32 (0x00010000 for TrueType, "OTTO" for CFF)
+  NumTables:     uint16
+  SearchRange:   uint16
+  EntrySelector: uint16
+  RangeShift:    uint16
+  TableDirectory: []TableRecord (NumTables entries)
+    Tag:     [4]byte
+    CheckSum: uint32
+    Offset:   uint32
+    Length:   uint32
+```
+
+---
+
+## Step 2: Writing the Implementation Guide and Ticket Bookkeeping
+
+This step covers writing the main design-doc deliverable (the intern-ready implementation guide), creating ticket tasks for the 5 implementation phases, relating key repo files, and updating the changelog. The guide covers 13 sections: executive summary, problem statement, TTC binary format, Go font parsing ecosystem, Glazed framework, project structure, parser implementation, writer implementation, Glazed command wiring, testing strategy, phased implementation plan, risks/alternatives, and API reference.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 1)
+
+**Assistant interpretation:** Write the full implementation guide, create docmgr bookkeeping, then upload to reMarkable.
+
+**Inferred user intent:** A comprehensive, self-contained document that a new intern can use to implement font-util from scratch.
+
+### What I did
+- Wrote the 53KB implementation guide in the design-doc slot, covering all 13 sections
+- Added 5 tasks for the phased implementation plan (Phases 1-5)
+- Related 5 key repo files (go.mod, main.go, doc.go, Makefile, glazed reference)
+- Updated changelog with the creation of the guide and diary
+- Updated diary with Step 2
+
+### Why
+The user explicitly asked for a detailed analysis/design/implementation guide for a new intern, with prose paragraphs, bullet points, pseudocode, diagrams, API references, and file references. The guide must be exhaustive enough for someone unfamiliar with the codebase or the Glazed framework.
+
+### What worked
+- The glazed-command-authoring skill provided the exact current API patterns, which made the command wiring section precise
+- The TTC binary format specification from Microsoft was clear enough to write the parser pseudocode directly
+- Breaking the implementation into 5 phases with day estimates gives the intern a realistic timeline
+
+### What didn't work
+- Nothing failed in this step — it was a documentation-only step
+
+### What I learned
+- The guide ended up quite long (~53KB) because covering the Glazed framework, TTC format, Go ecosystem, and implementation details all in one document requires substantial prose. This is appropriate for an intern onboarding guide but would be overkill for a senior engineer.
+- The distinction between bare commands and row-emitting commands in Glazed is important and needed explicit explanation since ttc2ttf is a bare command.
+
+### What was tricky to build
+- Deciding the right level of detail for the TTC binary format section — too little and the intern can't implement the parser, too much and it becomes a spec dump. I aimed for the "explain the structure with exact byte offsets and then provide pseudocode" level.
+- The font name extraction from the `name` table is a mini-format within a format — I documented it but left the full implementation for the code phase.
+
+### What warrants a second pair of eyes
+- Whether the `head` table `checkSumAdjustment` needs recomputation after extraction — I flagged this as an open question in the guide
+- Whether the guide should include a complete, copy-pasteable implementation or just pseudocode — I went with pseudocode + partial real code, which is the right balance for learning
+
+### What should be done in the future
+- Upload the guide to reMarkable (next step) ← **DONE**
+- Run `docmgr doctor` to validate before upload ← **DONE**
+- Implement the actual code per the phased plan
+
+### Code review instructions
+- Read the design-doc for completeness and accuracy
+- Verify the TTC format description against the Microsoft spec
+- Check that the Glazed command pattern matches the current glazed-command-authoring skill
+
+### Technical details
+
+**Document path:** `ttmp/2026/05/23/FONT-001--.../design-doc/01-implementation-guide-font-util-with-glazed-commands.md`
+**Size:** ~53KB
+**Sections:** 13 (Executive Summary through Key File References)
+**Tasks created:** 5 (Phases 1-5)
+**Files related:** 5 (go.mod, main.go, doc.go, Makefile, glazed reference)
+
+---
+
+## Step 3: Doctor Validation and reMarkable Upload
+
+This step covers running `docmgr doctor` to validate the ticket artifacts, fixing vocabulary and related-file warnings, and uploading the bundle to reMarkable.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 1)
+
+**Assistant interpretation:** Validate ticket health and upload the design doc + diary to reMarkable.
+
+**Inferred user intent:** Ensure the ticket is clean and the deliverable is accessible on reMarkable for offline reading.
+
+### What I did
+- Ran `docmgr doctor --ticket FONT-001 --stale-after 30`
+- Fixed vocabulary: added 5 missing topic slugs (binary-parsing, cli, fonts, glazed, go)
+- Fixed related file: removed broken relative path for glazed main.go, re-added with absolute path
+- Re-ran doctor — all checks passed
+- Uploaded bundle (design-doc + diary) to reMarkable at `/ai/2026/05/23/FONT-001`
+- Bundle name: "FONT-001 font-util Implementation Guide"
+
+### Why
+The deliverable checklist requires both doctor validation and reMarkable upload before handoff.
+
+### What worked
+- Doctor validation caught the vocabulary and path issues early
+- reMarkable upload succeeded on the first attempt with `--toc-depth 2`
+
+### What didn't work
+- The initial `docmgr doc relate --file-note` with a path outside the repo created a broken relative path. Had to manually edit the frontmatter to use an absolute path.
+
+### What I learned
+- `docmgr doc relate` normalizes paths relative to the ticket directory, which breaks for files outside the repo. Use `--remove-files` and manual frontmatter edits for cross-repo references.
+
+### What was tricky to build
+- The related-file path resolution: docmgr stores relative paths, but when the referenced file is outside the repo tree, the relative path becomes deeply nested (`../../../../../../../...`) and doesn't resolve correctly from the ticket directory.
+
+### What warrants a second pair of eyes
+- The reMarkable PDF rendering — need to verify on the device that the code blocks and tables render correctly. Large code blocks can overflow margins in pandoc-generated PDFs.
+
+### What should be done in the future
+- Verify the PDF rendering on the reMarkable device
+- Begin Phase 1 implementation (project skeleton)
+
+### Code review instructions
+- Check the reMarkable upload at `/ai/2026/05/23/FONT-001`
+- Verify doctor passes: `docmgr doctor --ticket FONT-001 --stale-after 30`
+
+### Technical details
+
+**reMarkable upload:** `OK: uploaded FONT-001 font-util Implementation Guide.pdf -> /ai/2026/05/23/FONT-001`
+**Doctor result:** ✅ All checks passed
+**Vocabulary entries added:** 5 (binary-parsing, cli, fonts, glazed, go)
+
+---
+
+## Step 4: Begin Implementation — Phase 1 Project Skeleton
+
+The user asked to go through the tasks one by one, keeping a detailed diary and committing at appropriate intervals. They also uploaded three TTC test files (Didot.ttc, Futura.ttc, GillSans.ttc) to the repo root. I added `*.ttc` to `.gitignore` to avoid committing large binary test data, and replaced the coarse 5-phase tasks with 19 granular tasks covering the full implementation.
+
+### Prompt Context
+
+**User prompt (verbatim):** "Add tasks to the ticket, then go through them task by task, keeping a detailed diary as you work, and committing at appropriate intervals. I'm uploading a few ttc in this directory too."
+
+**Assistant interpretation:** Add granular tasks to FONT-001, then implement each one sequentially, updating the diary after each meaningful commit, and committing code at natural boundaries.
+
+**Inferred user intent:** Actually build font-util end-to-end, not just design it. Use the TTC files as real test data.
+
+### What I did
+- Added `*.ttc` to `.gitignore` (724KB + 487KB + 1.2MB = too large for git)
+- Replaced 5 coarse tasks with 19 granular tasks in `tasks.md`
+- Beginning Phase 1 implementation
+
+### Why
+The user wants working code, not just design docs. The TTC files provide real test data for validation.
+
+### What worked
+- The TTC files are standard macOS system fonts — perfect test data
+
+### What didn't work
+- N/A (just starting)
+
+### What I learned
+- GillSans.ttc is the largest (1.2MB) — likely contains the most fonts/most shared tables
+
+### What was tricky to build
+- N/A yet
+
+### What warrants a second pair of eyes
+- N/A yet
+
+### What should be done in the future
+- Complete all Phase 1 tasks (1.1–1.8)
+
+### Code review instructions
+- Check `.gitignore` includes `*.ttc`
+
+### Technical details
+**TTC files:**
+- Didot.ttc: 724,008 bytes
+- Futura.ttc: 487,620 bytes
+- GillSans.ttc: 1,254,028 bytes

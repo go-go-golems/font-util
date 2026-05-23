@@ -19,3 +19,5 @@ dist/
 .env
 .envrc
 .history
+# TTC test files (large binaries, not committed)
+*.ttc
