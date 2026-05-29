@@ -58,3 +58,11 @@ FONT_UTIL_BINARY=$(shell which font-util)
 install:
 	GOWORK=off go build -o ./dist/font-util ./cmd/font-util && \
 		cp ./dist/font-util $(FONT_UTIL_BINARY)
+
+.PHONY: logcopter-generate
+logcopter-generate:
+	GOWORK=off go tool logcopter-gen -include-main -var zlog -area-prefix go-go-golems.font-util -strip-prefix github.com/go-go-golems/font-util ./cmd/... ./pkg/...
+
+.PHONY: logcopter-check
+logcopter-check:
+	GOWORK=off go tool logcopter-gen -include-main -var zlog -area-prefix go-go-golems.font-util -strip-prefix github.com/go-go-golems/font-util -check ./cmd/... ./pkg/...
